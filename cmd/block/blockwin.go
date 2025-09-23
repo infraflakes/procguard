@@ -18,7 +18,7 @@ func unblockFile(path string) error {
 	return os.Rename(blocked, path)
 }
 
-// platformLock denies **write** to Everyone except owner.
 func platformLock(path string) error {
-	return exec.Command("icacls", path, "/deny", "Everyone:(W)").Run()
+	// **inherit parent ACL** + **remove Everyone write** but **keep owner**
+	return exec.Command("icacls", path, "/inheritance:d", "/grant:r", "%USERNAME%:(W)", "/remove", "Everyone").Run()
 }
