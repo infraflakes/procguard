@@ -53,11 +53,16 @@ func runDaemon(cmd *cobra.Command, args []string) {
 			if name == "" {
 				continue // skip ghosts
 			}
-			// pretty time eg. 2025-09-24 19:47:05 | exe | pid
-			logger.Printf("%s | %s | %d\n",
+
+			parent, _ := p.Parent()
+			parentName, _ := parent.Name()
+
+			// pretty time eg. 2025-09-24 19:47:05 | exe | pid | parent_exe
+			logger.Printf("%s | %s | %d | %s\n",
 				time.Now().Format("2006-01-02 15:04:05"),
 				name,
-				p.Pid)
+				p.Pid,
+				parentName)
 
 			// kill if blocked
 			if slices.Contains(list, strings.ToLower(name)) {

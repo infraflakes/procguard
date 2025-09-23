@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"procguard/config"
+	"procguard/internal/config"
 
 	"github.com/spf13/cobra"
 )

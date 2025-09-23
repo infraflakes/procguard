@@ -35,13 +35,14 @@ func runFind(cmd *cobra.Command, args []string) {
 	found := 0
 	for scanner.Scan() {
 		line := scanner.Text()
-		// line = date and time | exe | pid"
+		// line = date and time | exe | pid | parent_exe
 		parts := strings.Split(line, " | ")
-		if len(parts) < 2 {
+		if len(parts) < 4 {
 			continue
 		}
-		exe := strings.ToLower(parts[1]) // TODO:exe only, add parent child later
-		if strings.Contains(exe, query) {
+		exe := strings.ToLower(parts[1])
+		parentExe := strings.ToLower(parts[3])
+		if strings.Contains(exe, query) || strings.Contains(parentExe, query) {
 			fmt.Println(line)
 			found++
 		}
