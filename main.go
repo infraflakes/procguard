@@ -26,6 +26,9 @@ func main() {
 	}
 	defer f.Close()
 
+	// keep our own logger so we can keep timestamp ON for pretty date
+	logger := log.New(f, "", 0) // no extra prefix
+
 	// hijack log pkg so we can use log.Printf without timestamp prefix
 	log.SetOutput(f)
 	log.SetFlags(0)
@@ -42,8 +45,17 @@ func main() {
 			if name == "" {
 				continue // skip ghosts
 			}
-			// line format : unixtime|exe|pid  (easy to grep later)
-			log.Printf("%d|%s|%d\n", time.Now().Unix(), name, p.Pid)
+			// ---- parent hunt ----
+			parentName := "<unknown>"
+			if pp, err := p.Parent(); err == nil && pp != nil {
+				parentName, _ = pp.Name()
+			}
+			// pretty line: 2025-09-24 19:47:05 | Parent - Child | pid
+			logger.Printf("%s | %s - %s | %d\n",
+				time.Now().Format("2006-01-02 15:04:05"),
+				parentName,
+				name,
+				p.Pid)
 		}
 	}
 }
