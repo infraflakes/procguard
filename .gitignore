@@ -1,0 +1,9 @@
+result
+.direnv/
+*.drv
+*.nix.d/
+*.log
+procguard
+todo.md
+idea.md
+.venv/
