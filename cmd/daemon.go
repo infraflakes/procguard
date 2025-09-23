@@ -21,53 +21,60 @@ var daemonCmd = &cobra.Command{
 	Run:   runDaemon,
 }
 
+// runDaemon starts the background process that monitors and logs system processes.
+// It periodically fetches the list of running processes, logs them, and terminates
+// any process found in the blocklist.
 func runDaemon(cmd *cobra.Command, args []string) {
-	// cache dir: ~/.cache on linux, %LOCALAPPDATA% on win
+	// Determine the appropriate cache directory based on the user's OS.
 	cacheDir, _ := os.UserCacheDir()
 	logFile := filepath.Join(cacheDir, "procguard", "events.log")
 
-	// make sure folder exists so openFile doesn't cry
+	// Ensure the directory for the log file exists before trying to create the file.
 	os.MkdirAll(filepath.Dir(logFile), 0755)
 
-	// open log : create | append | 0644 let others read
+	// Open the log file for appending, creating it if it doesn't exist.
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
 
-	// readable format logger
+	// Create a logger that writes to the log file in a simple, readable format.
 	logger := log.New(f, "", 0)
 
-	// 3s ticker; range blocks forever
+	// Use a ticker to trigger the process scan at regular intervals.
 	tick := time.NewTicker(3 * time.Second)
 	defer tick.Stop()
 
+	// The main loop of the daemon, which runs indefinitely.
 	for range tick.C {
-		// all pids, no root needed for obvious reasons
+		// Get a list of all running processes on the system.
 		procs, _ := process.Processes()
+		// Load the blocklist to check against running processes.
 		list, _ := block.LoadBlockList()
 
 		for _, p := range procs {
 			name, _ := p.Name()
 			if name == "" {
-				continue // skip ghosts
+				continue // Skip processes with no name (e.g., kernel processes).
 			}
 
+			// Get the parent process information for more detailed logging.
 			parent, _ := p.Parent()
 			parentName, _ := parent.Name()
 
-			// pretty time eg. 2025-09-24 19:47:05 | exe | pid | parent_exe
+			// Log the process information in a structured format.
 			logger.Printf("%s | %s | %d | %s\n",
 				time.Now().Format("2006-01-02 15:04:05"),
 				name,
 				p.Pid,
 				parentName)
 
-			// kill if blocked
+			// Enforce the blocklist by killing any process whose name is in the list.
 			if slices.Contains(list, strings.ToLower(name)) {
 				err := p.Kill()
 				if err != nil {
+					// Log any errors that occur during process termination.
 					logger.Printf("failed to kill %s (pid %d): %v", name, p.Pid, err)
 				} else {
 					logger.Printf("killed blocked process %s (pid %d)", name, p.Pid)

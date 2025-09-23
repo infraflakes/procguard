@@ -19,8 +19,12 @@ var findCmd = &cobra.Command{
 	Run:   runFind,
 }
 
+// runFind searches the process log file for lines containing the user's query.
+// It performs a case-insensitive search against both the process name and the parent process name.
 func runFind(cmd *cobra.Command, args []string) {
 	query := strings.ToLower(args[0])
+
+	// The log file is located in the user's cache directory.
 	cacheDir, _ := os.UserCacheDir()
 	logFile := filepath.Join(cacheDir, "procguard", "events.log")
 
@@ -35,11 +39,13 @@ func runFind(cmd *cobra.Command, args []string) {
 	found := 0
 	for scanner.Scan() {
 		line := scanner.Text()
-		// line = date and time | exe | pid | parent_exe
+		// Each log line is expected to be in the format: "date and time | exe | pid | parent_exe"
 		parts := strings.Split(line, " | ")
 		if len(parts) < 4 {
-			continue
+			continue // Skip malformed lines.
 		}
+
+		// Perform a case-insensitive search against the process name and parent process name.
 		exe := strings.ToLower(parts[1])
 		parentExe := strings.ToLower(parts[3])
 		if strings.Contains(exe, query) || strings.Contains(parentExe, query) {
@@ -47,6 +53,8 @@ func runFind(cmd *cobra.Command, args []string) {
 			found++
 		}
 	}
+
+	// Inform the user if no matches were found.
 	if found == 0 {
 		fmt.Println("no match for:", args[0])
 	}

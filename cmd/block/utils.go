@@ -13,10 +13,14 @@ const blockListFile = "blocklist.json"
 
 // ----------  exported helpers  ----------
 
-// LoadBlockList reads & normalises the JSON list.
+// LoadBlockList reads the blocklist file from the user's cache directory,
+// normalizes all entries to lowercase, and returns them as a slice of strings.
+// If the file doesn't exist, it returns an empty list.
 func LoadBlockList() ([]string, error) {
 	cacheDir, _ := os.UserCacheDir()
 	p := filepath.Join(cacheDir, "procguard", blockListFile)
+
+	// If the blocklist file doesn't exist, return an empty list.
 	b, err := os.ReadFile(p)
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -24,18 +28,22 @@ func LoadBlockList() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var list []string
 	_ = json.Unmarshal(b, &list)
-	// lower-case for case-insensitive compare
+
+	// Normalize all entries to lowercase for case-insensitive comparison.
 	for i := range list {
 		list[i] = strings.ToLower(list[i])
 	}
 	return list, nil
 }
 
-// SaveBlockList writes list (pretty) and sets 0600 on Unix, ACL on Win.
+// SaveBlockList writes the given list of strings to the blocklist file in the
+// user's cache directory. It normalizes all entries to lowercase before saving.
+// It also sets appropriate file permissions to secure the file.
 func SaveBlockList(list []string) error {
-	// lower-case for case-insensitive compare
+	// Normalize all entries to lowercase to ensure consistency.
 	for i := range list {
 		list[i] = strings.ToLower(list[i])
 	}
@@ -44,14 +52,18 @@ func SaveBlockList(list []string) error {
 	_ = os.MkdirAll(filepath.Join(cacheDir, "procguard"), 0755)
 	p := filepath.Join(cacheDir, "procguard", blockListFile)
 
+	// Marshal the list to JSON with indentation for readability.
 	b, _ := json.MarshalIndent(list, "", "  ")
 	if err := os.WriteFile(p, b, 0600); err != nil {
 		return err
 	}
+
+	// Apply platform-specific file locking to prevent unauthorized modification.
 	return platformLock(p) // build-tag dispatch
 }
 
-// Reply prints plain text or JSON depending on isJSON flag
+// Reply provides a standardized way to respond to CLI commands, supporting both
+// plain text and JSON output formats.
 func Reply(isJSON bool, status, exe string) {
 	if isJSON {
 		out, _ := json.Marshal(map[string]string{"status": status, "exe": exe})
@@ -61,7 +73,8 @@ func Reply(isJSON bool, status, exe string) {
 	}
 }
 
-// ReplyList prints plain text or JSON depending on isJSON flag
+// ReplyList provides a standardized way to output a list of strings, supporting
+// both plain text and JSON formats.
 func ReplyList(isJSON bool, list []string) {
 	if isJSON {
 		out, _ := json.Marshal(list)
@@ -81,31 +94,35 @@ func ReplyList(isJSON bool, list []string) {
 
 // ----------  OS-agnostic block/unblock  ----------
 
-// BlockExecutable blocks **whatever the OS considers runnable**.
+// BlockExecutable finds an executable by name and applies the appropriate
+// platform-specific blocking mechanism.
 func BlockExecutable(name string) error {
 	path, err := findExecutable(name)
 	if err != nil {
 		return err
 	}
+	// The actual blocking is handled by a platform-specific function.
 	return blockFile(path) // build-tag dispatch
 }
 
-// UnblockExecutable reverses the above.
+// UnblockExecutable finds an executable by name and reverses the blocking mechanism.
 func UnblockExecutable(name string) error {
 	path, err := findExecutable(name)
 	if err != nil {
 		return err
 	}
+	// The actual unblocking is handled by a platform-specific function.
 	return unblockFile(path) // build-tag dispatch
 }
 
 // ----------  internal helpers  ----------
 
-// findExecutable resolves name via PATH or CWD; returns **absolute** path.
+// findExecutable locates an executable by name, searching in the system's PATH
+// and the current working directory. It returns the absolute path to the executable.
 func findExecutable(name string) (string, error) {
 	if filepath.IsAbs(name) {
 		return name, nil
 	}
-	// allow both “chrome” and “chrome.exe” on Windows
+	// exec.LookPath provides a cross-platform way to find executables.
 	return exec.LookPath(name)
 }
