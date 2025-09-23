@@ -14,19 +14,24 @@ GO_CLEAN=$(GO_CMD) clean
 GO_INSTALL=$(GO_CMD) install
 
 # Binary name
-BINARY_NAME=procguard
+BINARY_LINUX_NAME=procguard
+BINARY_WINDOWS_NAME=ProcGuardSvc.exe
 NIX_BUILD=result
 
 # Build flags
 LDFLAGS = -ldflags="-s -w -X main.version=$(VERSION)"
 
-.PHONY: all build run fmt clean install
+.PHONY: all build-linux build-windows run fmt clean install
 
-all: build
+all: build-linux build-windows
 
-build:
-	@echo "Building $(BINARY_NAME) version $(VERSION)..."
+build-linux:
+	@echo "Building $(BINARY_NAME) for linux..."
 	$(GO_BUILD) $(LDFLAGS) -o $(BINARY_NAME) .
+
+build-windows:
+	@echo "Building ProcGuardSvc.exe for windows..."
+	GOOS=windows $(GO_BUILD) $(LDFLAGS) -o ProcGuardSvc.exe .
 
 run:
 	$(GO_RUN) . --
@@ -38,7 +43,8 @@ fmt:
 clean:
 	@echo "Cleaning..."
 	$(GO_CLEAN)
-	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_LINUX_NAME)
+	rm -f $(BINARY_WINDOWS_NAME)
 	rm -rf $(NIX_BUILD)
 
 install:

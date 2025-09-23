@@ -3,6 +3,8 @@ result
 *.drv
 *.nix.d/
 *.log
+rsrc.syso
+ProcGuardSvc.exe
 procguard
 todo.md
 idea.md

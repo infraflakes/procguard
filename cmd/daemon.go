@@ -25,6 +25,8 @@ var daemonCmd = &cobra.Command{
 // It periodically fetches the list of running processes, logs them, and terminates
 // any process found in the blocklist.
 func runDaemon(cmd *cobra.Command, args []string) {
+	checkAutostart()
+
 	// Determine the appropriate cache directory based on the user's OS.
 	cacheDir, _ := os.UserCacheDir()
 	logFile := filepath.Join(cacheDir, "procguard", "events.log")

@@ -11,6 +11,8 @@ import (
 type Config struct {
 	// SystemdInstalled tracks whether the systemd service has been installed.
 	SystemdInstalled bool `json:"systemd_installed"`
+	// AutostartEnabled tracks whether the Windows autostart task has been created.
+	AutostartEnabled bool `json:"autostart_enabled"`
 }
 
 // GetConfigPath returns the path to the configuration file.
@@ -33,7 +35,7 @@ func Load() (*Config, error) {
 	content, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		// If the config file doesn't exist, create a new one with default values.
-		return &Config{SystemdInstalled: false}, nil
+		return &Config{SystemdInstalled: false, AutostartEnabled: false}, nil
 	}
 	if err != nil {
 		return nil, err
