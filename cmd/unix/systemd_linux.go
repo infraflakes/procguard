@@ -1,6 +1,6 @@
 //go:build linux
 
-package cmd
+package unix
 
 import (
 	"fmt"
@@ -13,11 +13,10 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(systemdCmd)
-	systemdCmd.AddCommand(systemdInstallCmd, systemdRemoveCmd)
+	SystemdCmd.AddCommand(systemdInstallCmd, systemdRemoveCmd)
 }
 
-var systemdCmd = &cobra.Command{
+var SystemdCmd = &cobra.Command{
 	Use:   "systemd",
 	Short: "Manage systemd user service (Linux only)",
 }
