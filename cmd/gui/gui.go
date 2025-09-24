@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"net"
+
 	"net/http"
 	"os"
-	"os/exec"
+
 	"path/filepath"
 	"strings"
 
@@ -34,31 +34,29 @@ func init() {
 }
 
 func runGUI(cmd *cobra.Command, args []string) {
-	exe, _ := os.Executable()
-	exec.Command(exe, "daemon").Start()
+	const defaultPort = "58141"
+	addr := "127.0.0.1:" + defaultPort
+	fmt.Println("Starting GUI on http://" + addr)
+	StartWebServer(addr)
+}
 
+// StartWebServer configures and starts the blocking web server.
+func StartWebServer(addr string) {
 	r := http.NewServeMux()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(dashboard)
+	})
+	r.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
 	})
 	r.HandleFunc("/api/search", apiSearch)
 	r.HandleFunc("/api/block", apiBlock)
 	r.HandleFunc("/api/blocklist", apiBlockList)
 	r.HandleFunc("/api/unblock", apiUnblock)
 
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error starting server:", err)
-		os.Exit(1)
-	}
-	defer ln.Close()
-
-	addr := ln.Addr().String()
 	fmt.Println("GUI listening on http://" + addr)
-	openBrowser("http://" + addr)
-
-	if err := http.Serve(ln, r); err != nil {
+	if err := http.ListenAndServe(addr, r); err != nil {
 		fmt.Fprintln(os.Stderr, "Error running server:", err)
 		os.Exit(1)
 	}
@@ -66,12 +64,12 @@ func runGUI(cmd *cobra.Command, args []string) {
 
 func apiSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
-	exe, err := os.Executable()
+	cmd, err := runProcGuardCommand("find", q)
 	if err != nil {
-		http.Error(w, "Could not find executable path", 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
-	out, _ := exec.Command(exe, "find", q).Output()
+	out, _ := cmd.Output()
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	var jsonLines [][]string
 	for _, l := range lines {
@@ -91,23 +89,23 @@ func apiBlock(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	exe, err := os.Executable()
+	cmd, err := runProcGuardCommand("block", "add", req.Name)
 	if err != nil {
-		http.Error(w, "Could not find executable path", 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
-	exec.Command(exe, "block", "add", req.Name).Run()
+	cmd.Run()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 }
 
 func apiBlockList(w http.ResponseWriter, r *http.Request) {
-	exe, err := os.Executable()
+	cmd, err := runProcGuardCommand("block", "list", "--json")
 	if err != nil {
-		http.Error(w, "Could not find executable path", 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
-	out, _ := exec.Command(exe, "block", "list", "--json").Output()
+	out, _ := cmd.Output()
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(out)
 }
@@ -120,13 +118,13 @@ func apiUnblock(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	exe, err := os.Executable()
-	if err != nil {
-		http.Error(w, "Could not find executable path", 500)
-		return
-	}
 	for _, name := range req.Names {
-		exec.Command(exe, "block", "rm", name).Run()
+		cmd, err := runProcGuardCommand("block", "rm", name)
+		if err != nil {
+			// Decide if you want to stop or continue on error
+			continue
+		}
+		cmd.Run()
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})

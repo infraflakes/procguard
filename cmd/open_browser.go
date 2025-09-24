@@ -1,6 +1,6 @@
 //go:build !linux && !darwin && !windows
 
-package gui
+package cmd
 
 import "fmt"
 

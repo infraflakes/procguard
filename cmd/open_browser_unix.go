@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-package gui
+package cmd
 
 import (
 	"os/exec"

@@ -16,13 +16,15 @@ import (
 var DaemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "Run in the background, logs every 15 seconds",
-	Run:   runDaemon,
+	Run: func(cmd *cobra.Command, args []string) {
+		Start()
+		// Keep the main goroutine alive
+		select {}
+	},
 }
 
-// runDaemon starts the background process that monitors and logs system processes.
-// It periodically fetches the list of running processes, logs them, and terminates
-// any process found in the blocklist.
-func runDaemon(cmd *cobra.Command, args []string) {
+// Start runs the core daemon logic in goroutines.
+func Start() {
 	checkAutostart()
 
 	// Determine the appropriate cache directory based on the user's OS.
@@ -37,7 +39,9 @@ func runDaemon(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
+	// This defer will likely not be called if the daemon runs indefinitely, but it's good practice.
+	// In a real-world scenario, you'd have a proper shutdown mechanism.
+	// defer f.Close()
 
 	// Create a logger that writes to the log file in a simple, readable format.
 	logger := log.New(f, "", 0)
@@ -106,7 +110,4 @@ func runDaemon(cmd *cobra.Command, args []string) {
 			}
 		}
 	}()
-
-	// Keep the main goroutine alive
-	select {}
 }

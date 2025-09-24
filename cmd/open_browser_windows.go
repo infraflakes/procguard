@@ -1,6 +1,6 @@
 //go:build windows
 
-package gui
+package cmd
 
 import (
 	"os/exec"
