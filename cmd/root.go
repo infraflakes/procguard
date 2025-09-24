@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"time"
 	"procguard/cmd/block"
 	"procguard/cmd/daemon"
 	"procguard/cmd/gui"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -31,6 +31,9 @@ var rootCmd = &cobra.Command{
 
 		// No instance is running. This is the first instance.
 		fmt.Println("Starting ProcGuard...")
+
+		// Set up autostart for Windows if applicable.
+		daemon.EnsureAutostartTask()
 
 		// Start the daemon in the background
 		go daemon.Start()

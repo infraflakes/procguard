@@ -25,7 +25,6 @@ var DaemonCmd = &cobra.Command{
 
 // Start runs the core daemon logic in goroutines.
 func Start() {
-	checkAutostart()
 
 	// Determine the appropriate cache directory based on the user's OS.
 	cacheDir, _ := os.UserCacheDir()

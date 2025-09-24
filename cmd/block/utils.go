@@ -89,7 +89,3 @@ func ReplyList(isJSON bool, list []string) {
 		}
 	}
 }
-
-
-
-

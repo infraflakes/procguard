@@ -1,18 +1,15 @@
 package gui
 
 import (
-
 	_ "embed"
 	"encoding/json"
 	"fmt"
-
 
 	"net/http"
 	"os"
 
 	"path/filepath"
 	"strings"
-
 
 	"github.com/spf13/cobra"
 )
@@ -129,5 +126,3 @@ func apiUnblock(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 }
-
-
