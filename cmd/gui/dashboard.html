@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>ProcGuard Dashboard</title>
+  <style>
+    body{font-family:Arial,background:#111;color:#eee;margin:0;padding:2rem}
+    button{background:#0bf;border:0;padding:.5rem 1rem;border-radius:4px;cursor:pointer}
+    #log{height:300px;overflow-y:scroll;background:#000;padding:1rem;font-size:13px}
+  </style>
+</head>
+<body>
+  <h2>ProcGuard Live</h2>
+  <input id="q" placeholder="type app name">
+  <button onclick="search()">Search Log</button>
+  <button onclick="block()">Block Selected</button>
+
+  <h3>Real-time log</h3>
+  <div id="log"></div>
+
+  <script>
+    const log = document.getElementById('log');
+    const evtSource = new EventSource('/api/events');
+    evtSource.onmessage = e => {
+      log.innerHTML += e.data + '<br>';
+      log.scrollTop = log.scrollHeight;
+    };
+
+    async function search(){
+      const res = await fetch('/api/search?q='+encodeURIComponent(q.value));
+      const data = await res.json();
+      log.innerHTML = data.map(l=>l.join(' | ')).join('<br>');
+    }
+    async function block(){
+      const app = q.value;
+      await fetch('/api/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:app})});
+      alert('Blocked '+app);
+    }
+  </script>
+</body>
+</html>
