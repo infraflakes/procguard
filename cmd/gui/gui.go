@@ -1,17 +1,18 @@
 package gui
 
 import (
-	"bufio"
+
 	_ "embed"
 	"encoding/json"
 	"fmt"
+
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
+
 
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,9 @@ func init() {
 }
 
 func runGUI(cmd *cobra.Command, args []string) {
+	exe, _ := os.Executable()
+	exec.Command(exe, "daemon").Start()
+
 	r := http.NewServeMux()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -40,7 +44,8 @@ func runGUI(cmd *cobra.Command, args []string) {
 	})
 	r.HandleFunc("/api/search", apiSearch)
 	r.HandleFunc("/api/block", apiBlock)
-	r.HandleFunc("/api/events", apiEventStream)
+	r.HandleFunc("/api/blocklist", apiBlockList)
+	r.HandleFunc("/api/unblock", apiUnblock)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -61,7 +66,12 @@ func runGUI(cmd *cobra.Command, args []string) {
 
 func apiSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
-	out, _ := exec.Command("procguard", "find", q).Output()
+	exe, err := os.Executable()
+	if err != nil {
+		http.Error(w, "Could not find executable path", 500)
+		return
+	}
+	out, _ := exec.Command(exe, "find", q).Output()
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	var jsonLines [][]string
 	for _, l := range lines {
@@ -81,48 +91,45 @@ func apiBlock(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	exec.Command("procguard", "block", "add", req.Name).Run()
+	exe, err := os.Executable()
+	if err != nil {
+		http.Error(w, "Could not find executable path", 500)
+		return
+	}
+	exec.Command(exe, "block", "add", req.Name).Run()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 }
 
-func apiEventStream(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			f, err := os.Open(logPath)
-			if err != nil {
-				// Log file might not exist yet
-				continue
-			}
-			defer f.Close()
-
-			scanner := bufio.NewScanner(f)
-			var buf []string
-			for scanner.Scan() {
-				buf = append(buf, scanner.Text())
-			}
-
-			if len(buf) > 200 {
-				buf = buf[len(buf)-200:]
-			}
-
-			for _, line := range buf {
-				fmt.Fprintf(w, "data: %s\n\n", line)
-			}
-
-			if f, ok := w.(http.Flusher); ok {
-				f.Flush()
-			}
-		case <-r.Context().Done():
-			return
-		}
+func apiBlockList(w http.ResponseWriter, r *http.Request) {
+	exe, err := os.Executable()
+	if err != nil {
+		http.Error(w, "Could not find executable path", 500)
+		return
 	}
+	out, _ := exec.Command(exe, "block", "list", "--json").Output()
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
 }
+
+func apiUnblock(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Names []string `json:"names"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		http.Error(w, "Could not find executable path", 500)
+		return
+	}
+	for _, name := range req.Names {
+		exec.Command(exe, "block", "rm", name).Run()
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}
+
+

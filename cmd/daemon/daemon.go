@@ -47,15 +47,24 @@ func runDaemon(cmd *cobra.Command, args []string) {
 		logTick := time.NewTicker(15 * time.Second)
 		defer logTick.Stop()
 		for range logTick.C {
+			seen := make(map[int32]bool)
 			procs, _ := process.Processes()
 			for _, p := range procs {
+				if seen[p.Pid] {
+					continue
+				}
+				seen[p.Pid] = true
+
 				name, _ := p.Name()
-				if name == "" {
-					continue // Skip processes with no name (e.g., kernel processes).
+				if name == "" || strings.HasPrefix(name, "kworker") || name == "kthreadd" {
+					continue // Skip processes with no name or kworker threads.
 				}
 
 				// Get the parent process information for more detailed logging.
-				parent, _ := p.Parent()
+				parent, err := p.Parent()
+				if err != nil {
+					continue // Skip processes with no parent
+				}
 				parentName, _ := parent.Name()
 
 				// Log the process information in a structured format.

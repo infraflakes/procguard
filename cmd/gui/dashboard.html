@@ -4,38 +4,105 @@
   <meta charset="utf-8"/>
   <title>ProcGuard Dashboard</title>
   <style>
-    body{font-family:Arial,background:#111;color:#eee;margin:0;padding:2rem}
+    body{font-family:Arial,background:#f76f53;color:#000;margin:0;padding:2rem}
     button{background:#0bf;border:0;padding:.5rem 1rem;border-radius:4px;cursor:pointer}
-    #log{height:300px;overflow-y:scroll;background:#000;padding:1rem;font-size:13px}
+    #results, #blocklist-items{height:400px;overflow-y:scroll;background:#e6e6e6;padding:1rem;font-size:13px;}
+    #search-container, #blocklist-controls{margin-bottom: 1rem;}
+    nav > button { background: #333; color: #fff; }
   </style>
 </head>
 <body>
-  <h2>ProcGuard Live</h2>
-  <input id="q" placeholder="type app name">
-  <button onclick="search()">Search Log</button>
-  <button onclick="block()">Block Selected</button>
+  <nav>
+    <button onclick="showView('search-view')">Search</button>
+    <button onclick="showView('blocklist-view')">View Blocked Apps</button>
+  </nav>
 
-  <h3>Real-time log</h3>
-  <div id="log"></div>
+  <div id="search-view">
+    <h2>ProcGuard Dashboard</h2>
+    <div id="search-container">
+      <input id="q" placeholder="type app name">
+      <button onclick="search()">Search Log</button>
+      <button onclick="block()">Block This App</button>
+    </div>
+    <h3>Search Results</h3>
+    <div id="results"></div>
+  </div>
+
+  <div id="blocklist-view" style="display:none;">
+    <h2>Blocked Applications</h2>
+    <div id="blocklist-controls">
+        <button onclick="unblockSelected()">Unblock Selected</button>
+    </div>
+    <div id="blocklist-items"></div>
+  </div>
 
   <script>
-    const log = document.getElementById('log');
-    const evtSource = new EventSource('/api/events');
-    evtSource.onmessage = e => {
-      log.innerHTML += e.data + '<br>';
-      log.scrollTop = log.scrollHeight;
-    };
+    const results = document.getElementById('results');
+    const q = document.getElementById('q');
+    const blocklistItems = document.getElementById('blocklist-items');
+    const searchView = document.getElementById('search-view');
+    const blocklistView = document.getElementById('blocklist-view');
+
+    function showView(viewName) {
+        searchView.style.display = 'none';
+        blocklistView.style.display = 'none';
+        document.getElementById(viewName).style.display = 'block';
+
+        if (viewName === 'blocklist-view') {
+            loadBlocklist();
+        }
+    }
 
     async function search(){
       const res = await fetch('/api/search?q='+encodeURIComponent(q.value));
       const data = await res.json();
-      log.innerHTML = data.map(l=>l.join(' | ')).join('<br>');
+      if (data && data.length > 0) {
+        results.innerHTML = data.map(l=>l.join(' | ')).join('<br>');
+      } else {
+        results.innerHTML = "No results found.";
+      }
     }
+
     async function block(){
       const app = q.value;
+      if (!app) {
+        alert("Please enter an app name to block.");
+        return;
+      }
       await fetch('/api/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:app})});
-      alert('Blocked '+app);
+      alert('Block command sent for: '+app);
     }
+
+    async function loadBlocklist() {
+        const res = await fetch('/api/blocklist');
+        const data = await res.json();
+        blocklistItems.innerHTML = '';
+        if (data && data.length > 0) {
+            data.forEach(app => {
+                blocklistItems.innerHTML += `<div><input type="checkbox" name="blocked-app" value="${app}"> ${app}</div>`;
+            });
+        } else {
+            blocklistItems.innerHTML = 'No applications are currently blocked.';
+        }
+    }
+
+    async function unblockSelected() {
+        const selectedApps = Array.from(document.querySelectorAll('input[name="blocked-app"]:checked')).map(cb => cb.value);
+        if (selectedApps.length === 0) {
+            alert("Please select applications to unblock.");
+            return;
+        }
+        await fetch('/api/unblock', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({names: selectedApps})
+        });
+        alert('Unblock command sent for: ' + selectedApps.join(', '));
+        loadBlocklist(); // Refresh the list
+    }
+
+    // Show search view by default
+    showView('search-view');
   </script>
 </body>
 </html>
