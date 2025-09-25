@@ -4,40 +4,72 @@ package daemon
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 const taskName = "ProcGuardDaemon"
 
-// EnsureAutostartTask checks if the autostart task exists in the Windows Task Scheduler
-// and creates it if it doesn't.
+// EnsureAutostartTask checks if the autostart task exists and creates it if it doesn't.
+// On creation, it copies the executable to a persistent location and points the task there.
 func EnsureAutostartTask() {
 	// Check if the task already exists.
-	// The `schtasks /query` command returns a non-zero exit code if the task is not found.
 	err := exec.Command("schtasks", "/query", "/tn", taskName).Run()
-
-	// If err is nil, the task was found, so we don't need to do anything.
 	if err == nil {
-		// For quiet operation, you might want to remove this print statement.
-		// fmt.Println("Autostart task already exists.")
-		return
+		return // Task already exists, do nothing.
 	}
 
-	// Task not found, so let's create it.
-	fmt.Println("Autostart task not found. Creating it now...")
-	exePath, err := os.Executable()
+	fmt.Println("Performing first-time setup for ProcGuard persistence...")
+
+	// 1. Get path of the currently running executable (the source).
+	sourcePath, err := os.Executable()
 	if err != nil {
-		// Cannot get executable path, cannot create task.
 		fmt.Fprintln(os.Stderr, "Error getting executable path:", err)
 		return
 	}
 
-	// Create a new task that runs the executable on user logon.
-	// /sc ONLOGON - Runs when any user logs on.
-	// /rl HIGHEST - Runs with the highest privileges.
-	// /f - Suppresses the confirmation message if the task already exists (useful for updates).
-	cmd := exec.Command("schtasks", "/create", "/tn", taskName, "/tr", exePath, "/sc", "ONLOGON", "/rl", "HIGHEST", "/f")
+	// 2. Define the hidden backup location (the destination).
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData == "" {
+		fmt.Fprintln(os.Stderr, "Could not find LOCALAPPDATA directory.")
+		return
+	}
+	destDir := filepath.Join(localAppData, "ProcGuard")
+	destPath := filepath.Join(destDir, "procguard.exe")
+
+	// 3. Copy the executable to the backup location.
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		fmt.Fprintln(os.Stderr, "Error creating destination directory:", err)
+		return
+	}
+
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error opening source executable:", err)
+		return
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error creating destination executable:", err)
+		return
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error copying executable:", err)
+		return
+	}
+
+	fmt.Println("Executable backed up to", destPath)
+
+	// 4. Create the scheduled task pointing to the NEW backup location.
+	fmt.Println("Creating autostart task...")
+	cmd := exec.Command("schtasks", "/create", "/tn", taskName, "/tr", `"`+destPath+`"`, "/sc", "ONLOGON", "/rl", "HIGHEST", "/f")
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error creating autostart task:", err)
 	} else {

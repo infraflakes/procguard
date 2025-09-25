@@ -30,8 +30,10 @@ build-linux:
 	$(GO_BUILD) $(LDFLAGS) -o $(BINARY_NAME) .
 
 build-windows:
+	@echo "Generating Windows resources..."
+	go generate ./...
 	@echo "Building ProcGuardSvc.exe for windows..."
-	GOOS=windows $(GO_BUILD) $(LDFLAGS) -o ProcGuardSvc.exe .
+	GOOS=windows $(GO_BUILD) -ldflags="-s -w -H windowsgui -X main.version=$(VERSION)" -o ProcGuardSvc.exe .
 
 run:
 	$(GO_RUN) . --
