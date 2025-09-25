@@ -2,36 +2,39 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>ProcGuard Dashboard</title>
+  <title>Bảng điều khiển ProcGuard</title>
   <style>
     body{font-family:Arial,background:#f76f53;color:#000;margin:0;padding:2rem}
     button{background:#0bf;border:0;padding:.5rem 1rem;border-radius:4px;cursor:pointer}
     #results, #blocklist-items{height:400px;overflow-y:scroll;background:#e6e6e6;padding:1rem;font-size:13px;}
     #search-container, #blocklist-controls{margin-bottom: 1rem;}
     nav > button { background: #333; color: #fff; }
+    .status-message { margin-left: 1rem; padding: 5px; background: #333; color: #fff; border-radius: 3px; }
   </style>
 </head>
 <body>
   <nav>
-    <button onclick="showView('search-view')">Search</button>
-    <button onclick="showView('blocklist-view')">View Blocked Apps</button>
+    <button onclick="showView('search-view')">Tìm kiếm</button>
+    <button onclick="showView('blocklist-view')">Xem ứng dụng bị chặn</button>
   </nav>
 
   <div id="search-view">
-    <h2>ProcGuard Dashboard</h2>
+    <h2>Bảng điều khiển ProcGuard</h2>
     <div id="search-container">
-      <input id="q" placeholder="type app name">
-      <button onclick="search()">Search Log</button>
-      <button onclick="block()">Block This App</button>
+      <input id="q" placeholder="nhập tên ứng dụng">
+      <button onclick="search()">Tìm kiếm Log</button>
+      <button onclick="block()">Chặn ứng dụng này</button>
+      <span id="block-status" class="status-message"></span>
     </div>
-    <h3>Search Results</h3>
+    <h3>Kết quả tìm kiếm</h3>
     <div id="results"></div>
   </div>
 
   <div id="blocklist-view" style="display:none;">
-    <h2>Blocked Applications</h2>
+    <h2>Các ứng dụng bị chặn</h2>
     <div id="blocklist-controls">
-        <button onclick="unblockSelected()">Unblock Selected</button>
+        <button onclick="unblockSelected()">Bỏ chặn mục đã chọn</button>
+        <span id="unblock-status" class="status-message"></span>
     </div>
     <div id="blocklist-items"></div>
   </div>
@@ -42,6 +45,8 @@
     const blocklistItems = document.getElementById('blocklist-items');
     const searchView = document.getElementById('search-view');
     const blocklistView = document.getElementById('blocklist-view');
+    const blockStatus = document.getElementById('block-status');
+    const unblockStatus = document.getElementById('unblock-status');
 
     function showView(viewName) {
         searchView.style.display = 'none';
@@ -59,18 +64,19 @@
       if (data && data.length > 0) {
         results.innerHTML = data.map(l=>l.join(' | ')).join('<br>');
       } else {
-        results.innerHTML = "No results found.";
+        results.innerHTML = "Không tìm thấy kết quả.";
       }
     }
 
     async function block(){
       const app = q.value;
       if (!app) {
-        alert("Please enter an app name to block.");
+        alert("Vui lòng nhập tên ứng dụng để chặn.");
         return;
       }
       await fetch('/api/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:app})});
-      alert('Block command sent for: '+app);
+      blockStatus.innerText = 'Đã chặn ' + app;
+      setTimeout(() => { blockStatus.innerText = ''; }, 3000);
     }
 
     async function loadBlocklist() {
@@ -82,14 +88,14 @@
                 blocklistItems.innerHTML += `<div><input type="checkbox" name="blocked-app" value="${app}"> ${app}</div>`;
             });
         } else {
-            blocklistItems.innerHTML = 'No applications are currently blocked.';
+            blocklistItems.innerHTML = 'Hiện không có ứng dụng nào bị chặn.';
         }
     }
 
     async function unblockSelected() {
         const selectedApps = Array.from(document.querySelectorAll('input[name="blocked-app"]:checked')).map(cb => cb.value);
         if (selectedApps.length === 0) {
-            alert("Please select applications to unblock.");
+            alert("Vui lòng chọn các ứng dụng để bỏ chặn.");
             return;
         }
         await fetch('/api/unblock', {
@@ -97,7 +103,8 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({names: selectedApps})
         });
-        alert('Unblock command sent for: ' + selectedApps.join(', '));
+        unblockStatus.innerText = 'Đã bỏ chặn: ' + selectedApps.join(', ');
+        setTimeout(() => { unblockStatus.innerText = ''; }, 3000);
         loadBlocklist(); // Refresh the list
     }
 
