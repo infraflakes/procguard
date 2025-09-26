@@ -11,6 +11,7 @@
     #time-filter-container > * { margin-right: 1rem; }
     nav > button { background: #333; color: #fff; }
     .status-message { margin-left: 1rem; padding: 5px; background: #333; color: #fff; border-radius: 3px; }
+    .result-item { margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -24,7 +25,7 @@
     <div id="search-container">
       <input id="q" placeholder="nhập tên ứng dụng">
       <button onclick="search()">Tìm kiếm Log</button>
-      <button onclick="block()">Chặn ứng dụng này</button>
+      <button onclick="block()">Chặn mục đã chọn</button>
       <span id="block-status" class="status-message"></span>
     </div>
     <div id="time-filter-container">
@@ -109,20 +110,27 @@
       const res = await fetch(url);
       const data = await res.json();
       if (data && data.length > 0) {
-        results.innerHTML = data.map(l=>l.join(' | ')).join('<br>');
+        results.innerHTML = data.map(l => {
+            const processName = l[1];
+            return `<div class="result-item"><input type="checkbox" name="search-result-app" value="${processName}"> ${l.join(' | ')}</div>`;
+        }).join('');
       } else {
         results.innerHTML = "Không tìm thấy kết quả.";
       }
     }
 
     async function block(){
-      const app = q.value;
-      if (!app) {
-        alert("Vui lòng nhập tên ứng dụng để chặn.");
+      const selectedApps = Array.from(document.querySelectorAll('input[name="search-result-app"]:checked')).map(cb => cb.value);
+      if (selectedApps.length === 0) {
+        alert("Vui lòng chọn một ứng dụng từ kết quả tìm kiếm để chặn.");
         return;
       }
-      await fetch('/api/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:app})});
-      blockStatus.innerText = 'Đã chặn ' + app;
+      
+      // Remove duplicates
+      const uniqueApps = [...new Set(selectedApps)];
+
+      await fetch('/api/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:uniqueApps})});
+      blockStatus.innerText = 'Đã chặn: ' + uniqueApps.join(', ');
       setTimeout(() => { blockStatus.innerText = ''; }, 3000);
     }
 

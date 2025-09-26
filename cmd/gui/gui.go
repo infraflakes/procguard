@@ -91,18 +91,20 @@ func apiSearch(w http.ResponseWriter, r *http.Request) {
 
 func apiBlock(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name string `json:"name"`
+		Names []string `json:"names"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	cmd, err := runProcGuardCommand("block", "add", req.Name)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+	for _, name := range req.Names {
+		cmd, err := runProcGuardCommand("block", "add", name)
+		if err != nil {
+			// Decide if you want to stop or continue on error
+			continue
+		}
+		cmd.Run()
 	}
-	cmd.Run()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 }
