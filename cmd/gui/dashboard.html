@@ -7,7 +7,8 @@
     body{font-family:Arial,background:#f76f53;color:#000;margin:0;padding:2rem}
     button{background:#0bf;border:0;padding:.5rem 1rem;border-radius:4px;cursor:pointer}
     #results, #blocklist-items{height:400px;overflow-y:scroll;background:#e6e6e6;padding:1rem;font-size:13px;}
-    #search-container, #blocklist-controls{margin-bottom: 1rem;}
+    #search-container, #blocklist-controls, #time-filter-container{margin-bottom: 1rem;}
+    #time-filter-container > * { margin-right: 1rem; }
     nav > button { background: #333; color: #fff; }
     .status-message { margin-left: 1rem; padding: 5px; background: #333; color: #fff; border-radius: 3px; }
   </style>
@@ -26,6 +27,14 @@
       <button onclick="block()">Chặn ứng dụng này</button>
       <span id="block-status" class="status-message"></span>
     </div>
+    <div id="time-filter-container">
+        <span>Lọc theo thời gian:</span>
+        <button onclick="search({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
+        <button onclick="search({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
+        <button onclick="search({since: '7 days ago', until: 'now'})">7 ngày qua</button>
+        <input id="since" placeholder="Từ (vd: 2025-09-25 14:00:00)">
+        <input id="until" placeholder="Đến (vd: 2025-09-25 15:00:00)">
+    </div>
     <h3>Kết quả tìm kiếm</h3>
     <div id="results"></div>
   </div>
@@ -42,6 +51,8 @@
   <script>
     const results = document.getElementById('results');
     const q = document.getElementById('q');
+    const sinceInput = document.getElementById('since');
+    const untilInput = document.getElementById('until');
     const blocklistItems = document.getElementById('blocklist-items');
     const searchView = document.getElementById('search-view');
     const blocklistView = document.getElementById('blocklist-view');
@@ -58,8 +69,26 @@
         }
     }
 
-    async function search(){
-      const res = await fetch('/api/search?q='+encodeURIComponent(q.value));
+    async function search(range){
+      let since = '';
+      let until = '';
+
+      if (range) {
+        since = range.since;
+        until = range.until;
+      } else {
+        since = sinceInput.value;
+        until = untilInput.value;
+      }
+
+      let url = '/api/search?q='+encodeURIComponent(q.value);
+      if (since) {
+        url += '&since=' + encodeURIComponent(since);
+      }
+      if (until) {
+        url += '&until=' + encodeURIComponent(until);
+      }
+      const res = await fetch(url);
       const data = await res.json();
       if (data && data.length > 0) {
         results.innerHTML = data.map(l=>l.join(' | ')).join('<br>');

@@ -61,7 +61,18 @@ func StartWebServer(addr string) {
 
 func apiSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
-	cmd, err := runProcGuardCommand("find", q)
+	since := r.URL.Query().Get("since")
+	until := r.URL.Query().Get("until")
+
+	args := []string{"find", q}
+	if since != "" {
+		args = append(args, "--since", since)
+	}
+	if until != "" {
+		args = append(args, "--until", until)
+	}
+
+	cmd, err := runProcGuardCommand(args...)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return

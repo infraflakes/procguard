@@ -2,7 +2,6 @@ result
 .direnv/
 *.drv
 *.nix.d/
-*.log
 rsrc.syso
 ProcGuardSvc.exe
 procguard
