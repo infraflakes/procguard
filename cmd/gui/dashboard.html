@@ -32,8 +32,10 @@
         <button onclick="search({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
         <button onclick="search({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
         <button onclick="search({since: '7 days ago', until: 'now'})">7 ngày qua</button>
-        <input id="since" placeholder="Từ (vd: 2025-09-25 14:00:00)">
-        <input id="until" placeholder="Đến (vd: 2025-09-25 15:00:00)">
+        <br>
+        <span>Từ: </span><input type="date" id="since_date"> <input type="time" id="since_time" step="60">
+        <span>Đến: </span><input type="date" id="until_date"> <input type="time" id="until_time" step="60">
+        <button onclick="search()">Xác nhận</button>
     </div>
     <h3>Kết quả tìm kiếm</h3>
     <div id="results"></div>
@@ -51,13 +53,25 @@
   <script>
     const results = document.getElementById('results');
     const q = document.getElementById('q');
-    const sinceInput = document.getElementById('since');
-    const untilInput = document.getElementById('until');
+    const sinceDateInput = document.getElementById('since_date');
+    const sinceTimeInput = document.getElementById('since_time');
+    const untilDateInput = document.getElementById('until_date');
+    const untilTimeInput = document.getElementById('until_time');
     const blocklistItems = document.getElementById('blocklist-items');
     const searchView = document.getElementById('search-view');
     const blocklistView = document.getElementById('blocklist-view');
     const blockStatus = document.getElementById('block-status');
     const unblockStatus = document.getElementById('unblock-status');
+
+    function setDefaults() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
+        sinceDateInput.value = today;
+        untilDateInput.value = today;
+    }
 
     function showView(viewName) {
         searchView.style.display = 'none';
@@ -77,8 +91,12 @@
         since = range.since;
         until = range.until;
       } else {
-        since = sinceInput.value;
-        until = untilInput.value;
+        if (sinceDateInput.value && sinceTimeInput.value) {
+            since = `${sinceDateInput.value}T${sinceTimeInput.value}`;
+        }
+        if (untilDateInput.value && untilTimeInput.value) {
+            until = `${untilDateInput.value}T${untilTimeInput.value}`;
+        }
       }
 
       let url = '/api/search?q='+encodeURIComponent(q.value);
@@ -137,7 +155,8 @@
         loadBlocklist(); // Refresh the list
     }
 
-    // Show search view by default
+    // Set defaults and show search view by default
+    setDefaults();
     showView('search-view');
   </script>
 </body>

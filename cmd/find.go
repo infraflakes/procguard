@@ -32,9 +32,10 @@ var findCmd = &cobra.Command{
 // parseTime is a new helper function to handle our specific time logic.
 func parseTime(input string) (time.Time, error) {
 	now := time.Now()
-	input = strings.ToLower(strings.TrimSpace(input))
+	// Check for relative time strings first, case-insensitively
+	lowerInput := strings.ToLower(strings.TrimSpace(input))
 
-	switch input {
+	switch lowerInput {
 	case "now":
 		return now, nil
 	case "1 hour ago":
@@ -45,10 +46,20 @@ func parseTime(input string) (time.Time, error) {
 		return now.AddDate(0, 0, -7), nil
 	}
 
-	// Fallback to parsing a specific timestamp
-	parsedTime, err := time.ParseInLocation("2006-01-02 15:04:05", input, time.Local)
-	if err == nil {
-		return parsedTime, nil
+	// If it's not a relative string, try parsing it as a timestamp
+	// using the original, case-sensitive input string.
+	layouts := []string{
+		"2006-01-02 15:04:05", // The format we write
+		"2006-01-02T15:04",    // The format from datetime-local
+		"2006-01-02T15:04:05", // The format from datetime-local with seconds
+	}
+
+	for _, layout := range layouts {
+		// Use the original 'input' string here, not 'lowerInput'
+		parsedTime, err := time.ParseInLocation(layout, input, time.Local)
+		if err == nil {
+			return parsedTime, nil
+		}
 	}
 
 	return time.Time{}, fmt.Errorf("could not parse time: %s", input)
@@ -64,14 +75,14 @@ func runFind(cmd *cobra.Command, args []string) {
 	if since != "" {
 		sinceTime, err = parseTime(since)
 		if err != nil {
-			// Silently ignore parse errors for now, or we could log to stderr
+			fmt.Fprintln(os.Stderr, "Warning: could not parse 'since' time.", err)
 		}
 	}
 
 	if until != "" {
 		untilTime, err = parseTime(until)
 		if err != nil {
-			// Silently ignore
+			fmt.Fprintln(os.Stderr, "Warning: could not parse 'until' time.", err)
 		}
 	}
 
@@ -115,6 +126,6 @@ func runFind(cmd *cobra.Command, args []string) {
 	}
 
 	if found == 0 {
-		fmt.Println("no match for:", args[0])
+		// Ensure the UI shows "no results" by returning an empty result set.
 	}
 }
