@@ -6,11 +6,14 @@ import (
 	"net/http"
 	"os"
 	"procguard/internal/logger"
+	"sync"
 )
 
 // Server holds the dependencies for the GUI server.
 type Server struct {
-	logger *log.Logger
+	logger          *log.Logger
+	isAuthenticated bool
+	mu              sync.Mutex
 }
 
 // NewServer creates a new Server with its dependencies.
@@ -25,28 +28,28 @@ func StartWebServer(addr string) {
 	s := NewServer()
 	r := http.NewServeMux()
 
-	// Middleware to protect all routes except login and assets
-	authMiddleware := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			mu.Lock()
-			localIsAuthenticated := isAuthenticated
-			mu.Unlock()
-
-			if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" {
-				http.Redirect(w, r, "/login", http.StatusFound)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-
 	s.registerRoutes(r)
 
 	fmt.Println("GUI listening on http://" + addr)
-	if err := http.ListenAndServe(addr, authMiddleware(r)); err != nil {
+	if err := http.ListenAndServe(addr, s.authMiddleware(r)); err != nil {
 		fmt.Fprintln(os.Stderr, "Error running server:", err)
 		os.Exit(1)
 	}
+}
+
+// authMiddleware protects all routes except login and assets
+func (s *Server) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		localIsAuthenticated := s.isAuthenticated
+		s.mu.Unlock()
+
+		if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) registerRoutes(r *http.ServeMux) {

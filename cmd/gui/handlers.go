@@ -18,9 +18,9 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	mu.Lock()
-	localIsAuthenticated := isAuthenticated
-	mu.Unlock()
+	s.mu.Lock()
+	localIsAuthenticated := s.isAuthenticated
+	s.mu.Unlock()
 
 	if !localIsAuthenticated {
 		http.Redirect(w, r, "/login", http.StatusFound)
@@ -40,9 +40,9 @@ func (s *Server) handleLoginTemplate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	isAuthenticated = false
-	mu.Unlock()
+	s.mu.Lock()
+	s.isAuthenticated = false
+	s.mu.Unlock()
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
@@ -78,9 +78,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if auth.CheckPasswordHash(req.Password, cfg.PasswordHash) {
-		mu.Lock()
-		isAuthenticated = true
-		mu.Unlock()
+		s.mu.Lock()
+		s.isAuthenticated = true
+		s.mu.Unlock()
 		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
 			s.logger.Printf("Error encoding response: %v", err)
 		}
@@ -123,13 +123,14 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	
-		mu.Lock()
-		isAuthenticated = true
-		mu.Unlock()
+		s.mu.Lock()
+		s.isAuthenticated = true
+		s.mu.Unlock()
 		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
 			s.logger.Printf("Error encoding response: %v", err)
 		}
 }
+
 
 func (s *Server) apiSearch(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))

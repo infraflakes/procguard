@@ -3,7 +3,6 @@ package gui
 import (
 	"fmt"
 	_ "embed"
-	"sync"
 
 	"github.com/spf13/cobra"
 )
@@ -13,9 +12,6 @@ var dashboardHTML []byte
 
 //go:embed login.html
 var loginHTML []byte
-
-var isAuthenticated bool
-var mu sync.Mutex
 
 var GuiCmd = &cobra.Command{
 	Use:   "gui",
