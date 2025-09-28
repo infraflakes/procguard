@@ -1,10 +1,8 @@
 package daemon
 
 import (
-	"log"
-	"os"
-	"path/filepath"
 	"procguard/internal/blocklist"
+	"procguard/internal/logger"
 	"slices"
 	"strings"
 	"time"
@@ -25,27 +23,7 @@ var DaemonCmd = &cobra.Command{
 
 // Start runs the core daemon logic in goroutines.
 func Start() {
-
-	// Determine the appropriate cache directory based on the user's OS.
-	cacheDir, _ := os.UserCacheDir()
-	logFile := filepath.Join(cacheDir, "procguard", "events.log")
-
-	// Ensure the directory for the log file exists before trying to create the file.
-	if err := os.MkdirAll(filepath.Dir(logFile), 0755); err != nil {
-		log.Fatal(err)
-	}
-
-	// Open the log file for appending, creating it if it doesn't exist.
-	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// This defer will likely not be called if the daemon runs indefinitely, but it's good practice.
-	// In a real-world scenario, you'd have a proper shutdown mechanism.
-	// defer f.Close()
-
-	// Create a logger that writes to the log file in a simple, readable format.
-	logger := log.New(f, "", 0)
+	logger := logger.Get()
 
 	// Goroutine for logging processes
 	go func() {
