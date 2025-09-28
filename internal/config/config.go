@@ -13,6 +13,8 @@ type Config struct {
 	SystemdInstalled bool `json:"systemd_installed"`
 	// AutostartEnabled tracks whether the Windows autostart task has been created.
 	AutostartEnabled bool `json:"autostart_enabled"`
+	// PasswordHash stores the bcrypt hash of the GUI password.
+	PasswordHash string `json:"password_hash,omitempty"`
 }
 
 // GetConfigPath returns the path to the configuration file.
@@ -35,7 +37,7 @@ func Load() (*Config, error) {
 	content, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		// If the config file doesn't exist, create a new one with default values.
-		return &Config{SystemdInstalled: false, AutostartEnabled: false}, nil
+		return &Config{SystemdInstalled: false, AutostartEnabled: false, PasswordHash: ""}, nil
 	}
 	if err != nil {
 		return nil, err
