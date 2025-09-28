@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"net/http"
-	"time"
 
 	"procguard/cmd/block"
 	"procguard/cmd/daemon"
@@ -32,12 +31,8 @@ func HandleDefaultStartup() {
 	// Start the daemon in the background
 	go daemon.Start()
 
-	// Open the browser in a goroutine so it doesn't block.
-	go func() {
-		// Add a small delay to give the server time to start listening.
-		time.Sleep(1 * time.Second)
-		openBrowser(guiUrl)
-	}()
+	// Open the browser
+	openBrowser(guiUrl)
 
 	// Start the web server (this is a blocking call)
 	gui.StartWebServer(guiAddress)
