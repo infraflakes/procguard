@@ -13,12 +13,12 @@ func init() {
 	BlockRmCmd.Flags().Bool("json", false, "output json for gui")
 }
 
-// BlockRmCmd defines the command for removing a program from the blocklist.
 var BlockRmCmd = &cobra.Command{
 	Use:   "rm <exe>",
 	Short: "Remove program from block-list",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		CheckAuth(cmd)
 		// All entries are stored in lowercase for case-insensitive matching.
 		base := strings.ToLower(args[0])
 		list, _ := LoadBlockList()

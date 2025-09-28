@@ -2,7 +2,9 @@ package gui
 
 import (
 	"bytes"
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 	"procguard/internal/config"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -26,6 +29,17 @@ var loginHTML []byte
 var logPath string
 var isAuthenticated bool
 var mu sync.Mutex
+
+var tokenStore = make(map[string]time.Time)
+var tokenMutex sync.Mutex
+
+func generateToken() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
 
 // runProcGuardCommand executes the main procguard binary with the given arguments.
 // This is a workaround to avoid circular dependencies and to interact with the CLI
@@ -69,7 +83,7 @@ func StartWebServer(addr string) {
 			localIsAuthenticated := isAuthenticated
 			mu.Unlock()
 
-			if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" {
+			if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" && r.URL.Path != "/api/verify-token" {
 				http.Redirect(w, r, "/login", http.StatusFound)
 				return
 			}
@@ -108,6 +122,7 @@ func StartWebServer(addr string) {
 	r.HandleFunc("/api/has-password", handleHasPassword)
 	r.HandleFunc("/api/login", handleLogin)
 	r.HandleFunc("/api/set-password", handleSetPassword)
+	r.HandleFunc("/api/verify-token", handleVerifyToken)
 	r.HandleFunc("/api/search", apiSearch)
 	r.HandleFunc("/api/block", apiBlock)
 	r.HandleFunc("/api/blocklist", apiBlockList)
@@ -117,6 +132,29 @@ func StartWebServer(addr string) {
 	if err := http.ListenAndServe(addr, authMiddleware(r)); err != nil {
 		fmt.Fprintln(os.Stderr, "Error running server:", err)
 		os.Exit(1)
+	}
+}
+
+func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	tokenMutex.Lock()
+	expiration, found := tokenStore[req.Token]
+	if found {
+		delete(tokenStore, req.Token) // Single use token
+	}
+	tokenMutex.Unlock()
+
+	if found && time.Now().Before(expiration) {
+		json.NewEncoder(w).Encode(map[string]bool{"valid": true})
+	} else {
+		json.NewEncoder(w).Encode(map[string]bool{"valid": false})
 	}
 }
 
@@ -232,8 +270,18 @@ func apiBlock(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	token, err := generateToken()
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+	tokenMutex.Lock()
+	tokenStore[token] = time.Now().Add(1 * time.Minute) // Token is valid for 1 minute
+	tokenMutex.Unlock()
+
 	for _, name := range req.Names {
-		cmd, err := runProcGuardCommand("block", "add", name)
+		cmd, err := runProcGuardCommand("block", "add", name, "--token", token)
 		if err != nil {
 			// Decide if you want to stop or continue on error
 			continue
@@ -263,8 +311,18 @@ func apiUnblock(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	token, err := generateToken()
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+	tokenMutex.Lock()
+	tokenStore[token] = time.Now().Add(1 * time.Minute) // Token is valid for 1 minute
+	tokenMutex.Unlock()
+
 	for _, name := range req.Names {
-		cmd, err := runProcGuardCommand("block", "rm", name)
+		cmd, err := runProcGuardCommand("block", "rm", name, "--token", token)
 		if err != nil {
 			// Decide if you want to stop or continue on error
 			continue

@@ -12,12 +12,12 @@ func init() {
 	BlockAddCmd.Flags().Bool("json", false, "output json for gui")
 }
 
-// BlockAddCmd defines the command for adding a program to the blocklist.
 var BlockAddCmd = &cobra.Command{
 	Use:   "add <name>",
 	Short: "Add program to block-list (OS-agnostic)",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		CheckAuth(cmd)
 		// All entries are stored in lowercase for case-insensitive matching.
 		name := strings.ToLower(args[0])
 		list, _ := LoadBlockList()
