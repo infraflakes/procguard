@@ -46,6 +46,7 @@
     <h2>Các ứng dụng bị chặn</h2>
     <div id="blocklist-controls">
         <button onclick="unblockSelected()">Bỏ chặn mục đã chọn</button>
+        <button onclick="clearBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
         <span id="unblock-status" class="status-message"></span>
     </div>
     <div id="blocklist-items"></div>
@@ -161,6 +162,15 @@
         unblockStatus.innerText = 'Đã bỏ chặn: ' + selectedApps.join(', ');
         setTimeout(() => { unblockStatus.innerText = ''; }, 3000);
         loadBlocklist(); // Refresh the list
+    }
+
+    async function clearBlocklist() {
+        if (confirm("Bạn có chắc chắn muốn xóa toàn bộ danh sách chặn không?")) {
+            await fetch('/api/blocklist/clear', { method: 'POST' });
+            unblockStatus.innerText = 'Đã xóa toàn bộ danh sách chặn.';
+            setTimeout(() => { unblockStatus.innerText = ''; }, 3000);
+            loadBlocklist(); // Refresh the list
+        }
     }
 
     // Set defaults and show search view by default

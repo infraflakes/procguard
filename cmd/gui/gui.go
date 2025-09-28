@@ -126,6 +126,7 @@ func StartWebServer(addr string) {
 	r.HandleFunc("/api/search", apiSearch)
 	r.HandleFunc("/api/block", apiBlock)
 	r.HandleFunc("/api/blocklist", apiBlockList)
+	r.HandleFunc("/api/blocklist/clear", apiClearBlocklist)
 	r.HandleFunc("/api/unblock", apiUnblock)
 
 	fmt.Println("GUI listening on http://" + addr)
@@ -133,6 +134,31 @@ func StartWebServer(addr string) {
 		fmt.Fprintln(os.Stderr, "Error running server:", err)
 		os.Exit(1)
 	}
+}
+
+func apiClearBlocklist(w http.ResponseWriter, r *http.Request) {
+	token, err := generateToken()
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+	tokenMutex.Lock()
+	tokenStore[token] = time.Now().Add(1 * time.Minute) // Token is valid for 1 minute
+	tokenMutex.Unlock()
+
+	cmd, err := runProcGuardCommand("block", "clear", "--token", token)
+	if err != nil {
+		http.Error(w, "Failed to run command", http.StatusInternalServerError)
+		return
+	}
+
+	if err := cmd.Run(); err != nil {
+		http.Error(w, "Failed to clear blocklist", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 }
 
 func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
