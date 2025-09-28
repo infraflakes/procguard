@@ -26,7 +26,6 @@ var dashboardHTML []byte
 //go:embed login.html
 var loginHTML []byte
 
-var logPath string
 var isAuthenticated bool
 var mu sync.Mutex
 
@@ -36,10 +35,7 @@ var GuiCmd = &cobra.Command{
 	Run:   runGUI,
 }
 
-func init() {
-	cacheDir, _ := os.UserCacheDir()
-	logPath = filepath.Join(cacheDir, "procguard", "events.log")
-}
+func init() {}
 
 func runGUI(cmd *cobra.Command, args []string) {
 	const defaultPort = "58141"
@@ -82,12 +78,16 @@ func StartWebServer(addr string) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(dashboardHTML)
+		if _, err := w.Write(dashboardHTML); err != nil {
+			fmt.Fprintln(os.Stderr, "Error writing response:", err)
+		}
 	})
 
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(loginHTML)
+		if _, err := w.Write(loginHTML); err != nil {
+			fmt.Fprintln(os.Stderr, "Error writing response:", err)
+		}
 	})
 
 	r.HandleFunc("/logout", handleLogout)
@@ -142,7 +142,9 @@ func apiSaveBlocklist(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Disposition", "attachment; filename=procguard_blocklist.json")
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(b)
+	if _, err := w.Write(b); err != nil {
+		fmt.Fprintln(os.Stderr, "Error writing response:", err)
+	}
 }
 
 func apiLoadBlocklist(w http.ResponseWriter, r *http.Request) {
@@ -151,7 +153,11 @@ func apiLoadBlocklist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get file from form", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintln(os.Stderr, "Error closing file:", err)
+		}
+	}()
 
 	content, err := io.ReadAll(file)
 	if err != nil {
@@ -192,7 +198,9 @@ func apiLoadBlocklist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
+		fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+	}
 }
 
 func apiClearBlocklist(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +210,9 @@ func apiClearBlocklist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
+		fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+	}
 }
 
 func handleHasPassword(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +222,9 @@ func handleHasPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hasPassword := cfg.PasswordHash != ""
-	json.NewEncoder(w).Encode(map[string]bool{"hasPassword": hasPassword})
+	if err := json.NewEncoder(w).Encode(map[string]bool{"hasPassword": hasPassword}); err != nil {
+		fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+	}
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -234,9 +246,13 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		isAuthenticated = true
 		mu.Unlock()
-		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
+			fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+		}
 	} else {
-		json.NewEncoder(w).Encode(map[string]bool{"success": false})
+		if err := json.NewEncoder(w).Encode(map[string]bool{"success": false}); err != nil {
+			fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+		}
 	}
 }
 
@@ -275,8 +291,10 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		isAuthenticated = true
 		mu.Unlock()
-	
-		json.NewEncoder(w).Encode(map[string]bool{"success": true})}
+		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
+			fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+		}
+}
 
 func apiSearch(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))
@@ -310,7 +328,11 @@ func apiSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Cannot open log file", http.StatusInternalServerError)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintln(os.Stderr, "Error closing file:", err)
+		}
+	}()
 
 	var results [][]string
 	scanner := bufio.NewScanner(file)
@@ -341,7 +363,9 @@ func apiSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+	if err := json.NewEncoder(w).Encode(results); err != nil {
+		fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+	}
 }
 
 // parseTime is a helper function to handle our specific time logic for the GUI.
@@ -405,7 +429,9 @@ func apiBlock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
+		fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+	}
 }
 
 func apiBlockList(w http.ResponseWriter, r *http.Request) {
@@ -415,7 +441,9 @@ func apiBlockList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+	if err := json.NewEncoder(w).Encode(list); err != nil {
+		fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+	}
 }
 
 func apiUnblock(w http.ResponseWriter, r *http.Request) {
@@ -446,5 +474,7 @@ func apiUnblock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
+		fmt.Fprintln(os.Stderr, "Error encoding response:", err)
+	}
 }

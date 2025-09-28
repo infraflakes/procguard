@@ -31,7 +31,9 @@ func Start() {
 	logFile := filepath.Join(cacheDir, "procguard", "events.log")
 
 	// Ensure the directory for the log file exists before trying to create the file.
-	os.MkdirAll(filepath.Dir(logFile), 0755)
+	if err := os.MkdirAll(filepath.Dir(logFile), 0755); err != nil {
+		log.Fatal(err)
+	}
 
 	// Open the log file for appending, creating it if it doesn't exist.
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)

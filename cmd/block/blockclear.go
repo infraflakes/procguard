@@ -2,7 +2,6 @@ package block
 
 import (
 	"fmt"
-	"os"
 	"procguard/internal/blocklist"
 
 	"github.com/spf13/cobra"
@@ -11,12 +10,12 @@ import (
 var BlockClearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Empty the block-list completely",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		// This is done by saving an empty list to the blocklist file.
 		if err := blocklist.Save([]string{}); err != nil {
-			fmt.Fprintln(os.Stderr, "clear:", err)
-			os.Exit(1)
+			return fmt.Errorf("clear: %w", err)
 		}
 		fmt.Println("block-list cleared")
+		return nil
 	},
 }

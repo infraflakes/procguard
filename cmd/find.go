@@ -26,7 +26,7 @@ var findCmd = &cobra.Command{
 	Use:   "find <name>",
 	Short: "Find log lines by program name (case-insensitive)",
 	Args:  cobra.ExactArgs(1),
-	Run:   runFind,
+	RunE:  runFindE,
 }
 
 // parseTime is a new helper function to handle our specific time logic.
@@ -65,8 +65,8 @@ func parseTime(input string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("could not parse time: %s", input)
 }
 
-// runFind searches the process log file for lines containing the user's query.
-func runFind(cmd *cobra.Command, args []string) {
+// runFindE searches the process log file for lines containing the user's query.
+func runFindE(cmd *cobra.Command, args []string) error {
 	query := strings.ToLower(args[0])
 
 	var sinceTime, untilTime time.Time
@@ -91,12 +91,14 @@ func runFind(cmd *cobra.Command, args []string) {
 
 	file, err := os.Open(logFile)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "cannot open log:", err)
-		os.Exit(1)
+		return fmt.Errorf("cannot open log: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintln(os.Stderr, "Error closing file:", err)
+		}
+	}()
 
-	found := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -121,11 +123,7 @@ func runFind(cmd *cobra.Command, args []string) {
 		parentExe := strings.ToLower(parts[3])
 		if strings.Contains(exe, query) || strings.Contains(parentExe, query) {
 			fmt.Println(line)
-			found++
 		}
 	}
-
-	if found == 0 {
-		// Ensure the UI shows "no results" by returning an empty result set.
-	}
+	return nil
 }
