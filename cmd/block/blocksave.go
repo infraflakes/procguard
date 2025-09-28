@@ -15,6 +15,7 @@ var BlockSaveCmd = &cobra.Command{
 	Short: "Save current block-list to chosen path (CLI: specify path; GUI: will hook native dialog)",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		CheckAuth(cmd)
 		list, _ := LoadBlockList()
 		dest := args[0]
 

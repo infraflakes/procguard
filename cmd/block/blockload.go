@@ -15,6 +15,7 @@ var BlockLoadCmd = &cobra.Command{
 	Short: "Load block-list from a file, merging with the existing list",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		CheckAuth(cmd)
 		filePath := args[0]
 
 		// Read the content of the file to be loaded.

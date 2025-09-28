@@ -47,6 +47,9 @@
     <div id="blocklist-controls">
         <button onclick="unblockSelected()">Bỏ chặn mục đã chọn</button>
         <button onclick="clearBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
+        <button onclick="saveBlocklist()">Lưu danh sách chặn</button>
+        <button onclick="document.getElementById('load-input').click()">Tải lên danh sách chặn</button>
+        <input type="file" id="load-input" style="display: none;" onchange="loadBlocklistFile(event)">
         <span id="unblock-status" class="status-message"></span>
     </div>
     <div id="blocklist-items"></div>
@@ -171,6 +174,37 @@
             setTimeout(() => { unblockStatus.innerText = ''; }, 3000);
             loadBlocklist(); // Refresh the list
         }
+    }
+
+    async function saveBlocklist() {
+        const response = await fetch('/api/blocklist/save');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'procguard_blocklist.json';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    async function loadBlocklistFile(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+
+        await fetch('/api/blocklist/load', {
+            method: 'POST',
+            body: formData
+        });
+
+        unblockStatus.innerText = 'Đã tải lên và hợp nhất danh sách chặn.';
+        setTimeout(() => { unblockStatus.innerText = ''; }, 3000);
+        loadBlocklist(); // Refresh the list
     }
 
     // Set defaults and show search view by default

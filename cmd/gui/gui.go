@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -127,6 +128,8 @@ func StartWebServer(addr string) {
 	r.HandleFunc("/api/block", apiBlock)
 	r.HandleFunc("/api/blocklist", apiBlockList)
 	r.HandleFunc("/api/blocklist/clear", apiClearBlocklist)
+	r.HandleFunc("/api/blocklist/save", apiSaveBlocklist)
+	r.HandleFunc("/api/blocklist/load", apiLoadBlocklist)
 	r.HandleFunc("/api/unblock", apiUnblock)
 
 	fmt.Println("GUI listening on http://" + addr)
@@ -134,6 +137,68 @@ func StartWebServer(addr string) {
 		fmt.Fprintln(os.Stderr, "Error running server:", err)
 		os.Exit(1)
 	}
+}
+
+func apiSaveBlocklist(w http.ResponseWriter, r *http.Request) {
+	cmd, err := runProcGuardCommand("block", "list", "--json")
+	if err != nil {
+		http.Error(w, "Failed to get blocklist", http.StatusInternalServerError)
+		return
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		http.Error(w, "Failed to get blocklist", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Disposition", "attachment; filename=procguard_blocklist.json")
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
+}
+
+func apiLoadBlocklist(w http.ResponseWriter, r *http.Request) {
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Failed to get file from form", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	tempFile, err := os.CreateTemp("", "procguard-blocklist-*.json")
+	if err != nil {
+		http.Error(w, "Failed to create temporary file", http.StatusInternalServerError)
+		return
+	}
+	defer os.Remove(tempFile.Name())
+
+	_, err = io.Copy(tempFile, file)
+	if err != nil {
+		http.Error(w, "Failed to save temporary file", http.StatusInternalServerError)
+		return
+	}
+
+	token, err := generateToken()
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+	tokenMutex.Lock()
+	tokenStore[token] = time.Now().Add(1 * time.Minute)
+	tokenMutex.Unlock()
+
+	cmd, err := runProcGuardCommand("block", "load", tempFile.Name(), "--token", token)
+	if err != nil {
+		http.Error(w, "Failed to run command", http.StatusInternalServerError)
+		return
+	}
+
+	if err := cmd.Run(); err != nil {
+		http.Error(w, "Failed to load blocklist", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 }
 
 func apiClearBlocklist(w http.ResponseWriter, r *http.Request) {
