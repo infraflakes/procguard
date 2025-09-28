@@ -1,6 +1,8 @@
 package block
 
 import (
+	"procguard/internal/blocklist"
+
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +15,7 @@ var BlockListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Show current block-list",
 	Run: func(cmd *cobra.Command, args []string) {
-		list, _ := LoadBlockList()
+		list, _ := blocklist.Load()
 		isJSON, _ := cmd.Flags().GetBool("json")
 		// Use the centralized ReplyList function to handle the output.
 		ReplyList(isJSON, list)

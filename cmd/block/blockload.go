@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"procguard/internal/blocklist"
 	"slices"
 
 	"github.com/spf13/cobra"
@@ -15,7 +16,6 @@ var BlockLoadCmd = &cobra.Command{
 	Short: "Load block-list from a file, merging with the existing list",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		CheckAuth(cmd)
 		filePath := args[0]
 
 		// Read the content of the file to be loaded.
@@ -46,7 +46,7 @@ var BlockLoadCmd = &cobra.Command{
 		}
 
 		// Load the existing blocklist to merge with.
-		existingList, _ := LoadBlockList()
+		existingList, _ := blocklist.Load()
 
 		// Merge the two lists, ensuring that there are no duplicate entries.
 		for _, entry := range newEntries {
@@ -56,7 +56,7 @@ var BlockLoadCmd = &cobra.Command{
 		}
 
 		// Save the newly merged list.
-		if err := SaveBlockList(existingList); err != nil {
+		if err := blocklist.Save(existingList); err != nil {
 			fmt.Fprintln(os.Stderr, "save:", err)
 			os.Exit(1)
 		}

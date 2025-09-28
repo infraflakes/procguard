@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"procguard/cmd/block"
+	"procguard/internal/blocklist"
 	"slices"
 	"strings"
 	"time"
@@ -85,7 +85,7 @@ func Start() {
 		killTick := time.NewTicker(100 * time.Millisecond)
 		defer killTick.Stop()
 		for range killTick.C {
-			list, _ := block.LoadBlockList()
+			list, _ := blocklist.Load()
 			if len(list) == 0 {
 				continue
 			}

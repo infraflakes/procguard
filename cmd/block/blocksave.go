@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"procguard/internal/blocklist"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -15,8 +16,7 @@ var BlockSaveCmd = &cobra.Command{
 	Short: "Save current block-list to chosen path (CLI: specify path; GUI: will hook native dialog)",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		CheckAuth(cmd)
-		list, _ := LoadBlockList()
+		list, _ := blocklist.Load()
 		dest := args[0]
 
 		// The blocklist is saved in a JSON object that includes a timestamp for when
