@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"procguard/internal/config"
 )
 
 const taskName = "ProcGuardDaemon"
@@ -74,5 +75,14 @@ func EnsureAutostartTask() {
 		fmt.Fprintln(os.Stderr, "Error creating autostart task:", err)
 	} else {
 		fmt.Println("Successfully created autostart task.")
+		cfg, err := config.Load()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to load config:", err)
+			return
+		}
+		cfg.AutostartEnabled = true
+		if err := cfg.Save(); err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to save config:", err)
+		}
 	}
 }
