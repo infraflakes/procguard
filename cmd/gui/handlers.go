@@ -267,6 +267,12 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
 		s.logger.Printf("Error encoding response: %v", err)
 	}
+
+	// Exit the application to allow the uninstall to complete.
+	go func() {
+		time.Sleep(1 * time.Second)
+		os.Exit(0)
+	}()
 }
 
 func (s *Server) apiClearBlocklist(w http.ResponseWriter, r *http.Request) {

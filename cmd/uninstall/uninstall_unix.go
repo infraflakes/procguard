@@ -86,7 +86,13 @@ func removeDataAndBackup() error {
 	if err != nil {
 		return err
 	}
-	if err := os.RemoveAll(filepath.Join(cacheDir, "procguard")); err != nil {
+	procguardDir := filepath.Join(cacheDir, "procguard")
+	logsDir := filepath.Join(procguardDir, "logs")
+
+	if err := os.RemoveAll(logsDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not remove logs directory: %v\n", err)
+	}
+	if err := os.RemoveAll(procguardDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not remove cache directory: %v\n", err)
 	}
 

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -19,18 +21,21 @@ func Get() *log.Logger {
 		if err != nil {
 			log.Fatalf("could not get user cache dir: %v", err)
 		}
-		logFile := filepath.Join(cacheDir, "procguard", "events.log")
+		logDir := filepath.Join(cacheDir, "procguard", "logs")
 
-		if err := os.MkdirAll(filepath.Dir(logFile), 0755); err != nil {
+		if err := os.MkdirAll(logDir, 0755); err != nil {
 			log.Fatalf("could not create log directory: %v", err)
 		}
 
-		f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			log.Fatalf("could not open log file: %v", err)
+		lumberjackLogger := &lumberjack.Logger{
+			Filename:   filepath.Join(logDir, "events.log"),
+			MaxSize:    10, // megabytes
+			MaxBackups: 3,
+			MaxAge:     28, //days
+			Compress:   true,
 		}
 
-		logger = log.New(f, "", 0)
+		logger = log.New(lumberjackLogger, "", 0)
 	})
 	return logger
 }

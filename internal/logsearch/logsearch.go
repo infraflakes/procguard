@@ -33,7 +33,7 @@ func Search(query, since, until string) ([][]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get user cache dir: %w", err)
 	}
-	logFile := filepath.Join(cacheDir, "procguard", "events.log")
+	logFile := filepath.Join(cacheDir, "procguard", "logs", "events.log")
 
 	file, err := os.Open(logFile)
 	if err != nil {

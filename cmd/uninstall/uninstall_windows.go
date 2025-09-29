@@ -64,7 +64,13 @@ func removeDataFiles() error {
 	if err != nil {
 		return err
 	}
-	return os.RemoveAll(filepath.Join(cacheDir, "procguard"))
+	procguardDir := filepath.Join(cacheDir, "procguard")
+	logsDir := filepath.Join(procguardDir, "logs")
+
+	if err := os.RemoveAll(logsDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not remove logs directory: %v\n", err)
+	}
+	return os.RemoveAll(procguardDir)
 }
 
 func removeBackup() error {

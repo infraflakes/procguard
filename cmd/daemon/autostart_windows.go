@@ -38,7 +38,7 @@ func EnsureAutostartTask() {
 		return
 	}
 	destDir := filepath.Join(localAppData, "ProcGuard")
-	destPath := filepath.Join(destDir, "procguard.exe")
+	destPath := filepath.Join(destDir, "ProcGuardSvc.exe")
 
 	// 3. Copy the executable to the backup location.
 	if err := os.MkdirAll(destDir, 0755); err != nil {

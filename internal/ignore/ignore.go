@@ -69,6 +69,10 @@ var DefaultLinux = []string{
 	"ssh-agent",
 }
 
+// DefaultWindows is the default list of process names to ignore on Windows.
+var DefaultWindows = []string{}
+
+
 // IsIgnored checks if a process name should be ignored based on the ignore list.
 // It performs both exact and prefix matching, and handles truncated names.
 func IsIgnored(name string, ignoreList []string) bool {
