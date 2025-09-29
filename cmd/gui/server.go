@@ -70,4 +70,5 @@ func (s *Server) registerRoutes(r *http.ServeMux) {
 	r.HandleFunc("/api/blocklist/save", s.apiSaveBlocklist)
 	r.HandleFunc("/api/blocklist/load", s.apiLoadBlocklist)
 	r.HandleFunc("/api/unblock", s.apiUnblock)
+	r.HandleFunc("/api/uninstall", s.apiUninstall)
 }

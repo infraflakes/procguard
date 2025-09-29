@@ -18,6 +18,7 @@
   <nav>
     <button onclick="showView('search-view')">Tìm kiếm</button>
     <button onclick="showView('blocklist-view')">Xem ứng dụng bị chặn</button>
+    <button onclick="showView('settings-view')">Cài đặt</button>
     <button onclick="window.location.href='/logout'" style="float: right;">Đăng xuất</button>
   </nav>
 
@@ -56,6 +57,14 @@
     <div id="blocklist-items"></div>
   </div>
 
+  <div id="settings-view" style="display:none;">
+    <h2>Cài đặt</h2>
+    <div id="settings-controls">
+        <button onclick="uninstall()" style="background-color: #d9534f;">Gỡ cài đặt ProcGuard</button>
+        <p><b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt ProcGuard khỏi hệ thống.</p>
+    </div>
+  </div>
+
   <script>
     const results = document.getElementById('results');
     const q = document.getElementById('q');
@@ -66,6 +75,7 @@
     const blocklistItems = document.getElementById('blocklist-items');
     const searchView = document.getElementById('search-view');
     const blocklistView = document.getElementById('blocklist-view');
+    const settingsView = document.getElementById('settings-view');
     const blockStatus = document.getElementById('block-status');
     const unblockStatus = document.getElementById('unblock-status');
 
@@ -82,6 +92,7 @@
     function showView(viewName) {
         searchView.style.display = 'none';
         blocklistView.style.display = 'none';
+        settingsView.style.display = 'none';
         document.getElementById(viewName).style.display = 'block';
 
         if (viewName === 'blocklist-view') {
@@ -206,6 +217,28 @@
         unblockStatus.innerText = 'Đã tải lên và hợp nhất danh sách chặn.';
         setTimeout(() => { unblockStatus.innerText = ''; }, 3000);
         loadBlocklist(); // Refresh the list
+    }
+
+    async function uninstall() {
+        if (confirm("Bạn có chắc chắn muốn gỡ cài đặt ProcGuard không? Thao tác này không thể hoàn tác.")) {
+            const password = prompt("Vui lòng nhập mật khẩu để xác nhận:");
+            if (password === null) {
+                return; // User cancelled the password prompt
+            }
+
+            const response = await fetch('/api/uninstall', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+
+            if (response.ok) {
+                alert("ProcGuard đã được gỡ cài đặt. Trình duyệt sẽ đóng.");
+                window.close();
+            } else {
+                alert("Gỡ cài đặt thất bại. Vui lòng kiểm tra lại mật khẩu.");
+            }
+        }
     }
 
     // Set defaults and show search view by default

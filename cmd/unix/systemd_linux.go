@@ -4,6 +4,7 @@ package unix
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,13 +56,50 @@ func installSystemdServiceE(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Get the path to the currently running executable to use in the service file.
-	exePath, err := os.Executable()
+	// 1. Get path of the currently running executable (the source).
+	sourcePath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("error getting executable path: %w", err)
 	}
 
-	// Define the content of the systemd service file.
+	// 2. Define the hidden backup location in the user's local data directory.
+	dataDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("could not find user home directory: %w", err)
+	}
+	destDir := filepath.Join(dataDir, ".local", "share", "procguard")
+	destPath := filepath.Join(destDir, "procguard")
+
+	// 3. Copy the executable to the backup location.
+	fmt.Println("Creating backup of executable...")
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("error creating destination directory: %w", err)
+	}
+
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("error opening source executable: %w", err)
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("error creating destination executable: %w", err)
+	}
+	defer destFile.Close()
+
+	if _, err = io.Copy(destFile, sourceFile); err != nil {
+		return fmt.Errorf("error copying executable: %w", err)
+	}
+
+	// Ensure the backup is executable
+	if err := os.Chmod(destPath, 0755); err != nil {
+		return fmt.Errorf("error setting executable permission on backup: %w", err)
+	}
+
+	fmt.Println("Executable backed up to", destPath)
+
+	// 4. Define the content of the systemd service file, pointing to the backup.
 	serviceContent := fmt.Sprintf(`[Unit]
 Description=ProcGuard Daemon
 
@@ -71,7 +109,7 @@ Restart=always
 
 [Install]
 WantedBy=default.target
-`, exePath)
+`, destPath)
 
 	servicePath, err := getServiceFilePath()
 	if err != nil {
