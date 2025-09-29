@@ -1,0 +1,58 @@
+//go:build windows
+
+package winutil
+
+import (
+	"fmt"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
+)
+
+const (
+	// Integrity Level constants
+	SECURITY_MANDATORY_UNTRUSTED_RID         = 0x00000000
+	SECURITY_MANDATORY_LOW_RID             = 0x00001000
+	SECURITY_MANDATORY_MEDIUM_RID          = 0x00002000
+	SECURITY_MANDATORY_HIGH_RID            = 0x00003000
+	SECURITY_MANDATORY_SYSTEM_RID          = 0x00004000
+	SECURITY_MANDATORY_PROTECTED_PROCESS_RID = 0x00005000
+)
+
+// GetProcessIntegrityLevel returns the integrity level of a process.
+func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION, false, pid)
+	if err != nil {
+		// Ignore errors for processes we can't open (e.g., system processes)
+		return 0, nil
+	}
+	defer windows.Close(h)
+
+	var token windows.Token
+	if err := windows.OpenProcessToken(h, windows.TOKEN_QUERY, &token); err != nil {
+		return 0, fmt.Errorf("could not open process token: %w", err)
+	}
+
+	var tokenInfoLen uint32
+	// First call to get the required buffer size. This is expected to fail.
+	windows.GetTokenInformation(token, windows.TokenIntegrityLevel, nil, 0, &tokenInfoLen)
+	if tokenInfoLen == 0 {
+		return 0, fmt.Errorf("GetTokenInformation failed to get buffer size")
+	}
+
+	tokenInfo := make([]byte, tokenInfoLen)
+	if err := windows.GetTokenInformation(token, windows.TokenIntegrityLevel, &tokenInfo[0], tokenInfoLen, &tokenInfoLen); err != nil {
+		return 0, fmt.Errorf("could not get token information: %w", err)
+	}
+
+	til := (*windows.Tokenmandatorylabel)(unsafe.Pointer(&tokenInfo[0]))
+	sid := til.Label.Sid
+
+	// The integrity level is the last sub-authority in the SID.
+	// A SID is structured as: [Revision][SubAuthorityCount][Authority][SubAuthority1]...[SubAuthorityN]
+	// We need to get the address of the last SubAuthority.
+	subAuthorityCount := *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(sid)) + 1))
+	pSubAuthority := uintptr(unsafe.Pointer(sid)) + 8 + (uintptr(subAuthorityCount) - 1) * 4
+
+	return *(*uint32)(unsafe.Pointer(pSubAuthority)), nil
+}

@@ -70,7 +70,20 @@ var DefaultLinux = []string{
 }
 
 // DefaultWindows is the default list of process names to ignore on Windows.
-var DefaultWindows = []string{}
+var DefaultWindows = []string{
+	"System Idle Process",
+	"System",
+	"smss.exe",
+	"services.exe",
+	"lsass.exe",
+	"wininit.exe",
+	"fontdrvhost.exe",
+	"dwm.exe",
+	"svchost.exe",
+	"RuntimeBroker.exe",
+	"dllhost.exe",
+	"taskhostw.exe",
+}
 
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.

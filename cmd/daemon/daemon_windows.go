@@ -5,6 +5,7 @@ package daemon
 import (
 	"log"
 	"procguard/internal/ignore"
+	"procguard/internal/winutil"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/process"
@@ -24,6 +25,12 @@ func runLogging(logger *log.Logger) {
 			}
 			seen[p.Pid] = true
 
+			// Stage 1: Skip processes with System or High integrity level
+			il, err := winutil.GetProcessIntegrityLevel(uint32(p.Pid))
+			if err == nil && il >= winutil.SECURITY_MANDATORY_SYSTEM_RID {
+				continue
+			}
+
 			name, _ := p.Name()
 			if name == "" {
 				continue // Skip processes with no name
@@ -35,6 +42,7 @@ func runLogging(logger *log.Logger) {
 			}
 			parentName, _ := parent.Name()
 
+			// Stage 2: Skip based on name
 			if ignore.IsIgnored(name, ignoreList) || ignore.IsIgnored(parentName, ignoreList) {
 				continue
 			}
