@@ -24,13 +24,13 @@ var SystemdCmd = &cobra.Command{
 var systemdInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install and enable the systemd user service",
-	Run:   installSystemdService,
+	RunE:  installSystemdServiceE,
 }
 
 var systemdRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "Disable and remove the systemd user service",
-	Run:   removeSystemdService,
+	RunE:  removeSystemdServiceE,
 }
 
 // getServiceFilePath returns the path where the systemd service file should be stored.
@@ -42,25 +42,23 @@ func getServiceFilePath() (string, error) {
 	return filepath.Join(configDir, "systemd", "user", "procguard.service"), nil
 }
 
-// installSystemdService creates and installs a systemd user service for the ProcGuard daemon.
-func installSystemdService(cmd *cobra.Command, args []string) {
+// installSystemdServiceE creates and installs a systemd user service for the ProcGuard daemon.
+func installSystemdServiceE(cmd *cobra.Command, args []string) error {
 	// First, check if the service is already installed to avoid duplication.
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error loading config:", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading config: %w", err)
 	}
 
 	if cfg.SystemdInstalled {
 		fmt.Println("Systemd service already installed.")
-		return
+		return nil
 	}
 
 	// Get the path to the currently running executable to use in the service file.
 	exePath, err := os.Executable()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error getting executable path:", err)
-		os.Exit(1)
+		return fmt.Errorf("error getting executable path: %w", err)
 	}
 
 	// Define the content of the systemd service file.
@@ -77,86 +75,89 @@ WantedBy=default.target
 
 	servicePath, err := getServiceFilePath()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error getting service file path:", err)
-		os.Exit(1)
+		return fmt.Errorf("error getting service file path: %w", err)
 	}
 
 	// Create the directory for the service file if it doesn't exist.
 	if err := os.MkdirAll(filepath.Dir(servicePath), 0755); err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating systemd directory:", err)
-		os.Exit(1)
+		return fmt.Errorf("error creating systemd directory: %w", err)
 	}
 
 	// Write the service file to the systemd user directory.
 	if err := os.WriteFile(servicePath, []byte(serviceContent), 0644); err != nil {
-		fmt.Fprintln(os.Stderr, "Error writing service file:", err)
-		os.Exit(1)
+		return fmt.Errorf("error writing service file: %w", err)
 	}
 
 	// Reload the systemd daemon to make it aware of the new service.
 	fmt.Println("Reloading systemd user daemon...")
-	exec.Command("systemctl", "--user", "daemon-reload").Run()
+	if err := exec.Command("systemctl", "--user", "daemon-reload").Run(); err != nil {
+		return fmt.Errorf("error reloading systemd: %w", err)
+	}
 
 	// Enable the service to ensure it starts automatically on boot.
 	fmt.Println("Enabling procguard service...")
 	if err := exec.Command("systemctl", "--user", "enable", "procguard.service").Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error enabling service:", err)
-		os.Exit(1)
+		return fmt.Errorf("error enabling service: %w", err)
 	}
 
 	// Update the configuration to reflect that the service is installed.
 	cfg.SystemdInstalled = true
 	if err := cfg.Save(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error saving config:", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving config: %w", err)
 	}
 
 	fmt.Println("Service installed. Start it with: systemctl --user start procguard.service")
+	return nil
 }
 
-// removeSystemdService stops, disables, and removes the systemd user service.
-func removeSystemdService(cmd *cobra.Command, args []string) {
+// removeSystemdServiceE stops, disables, and removes the systemd user service.
+func removeSystemdServiceE(cmd *cobra.Command, args []string) error {
 	// First, check if the service is actually installed.
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error loading config:", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading config: %w", err)
 	}
 
 	if !cfg.SystemdInstalled {
 		fmt.Println("Systemd service not installed.")
-		return
+		return nil
 	}
 
 	// Stop the service if it's running.
 	fmt.Println("Stopping procguard service...")
-	exec.Command("systemctl", "--user", "stop", "procguard.service").Run()
+	if err := exec.Command("systemctl", "--user", "stop", "procguard.service").Run(); err != nil {
+		// Don't return an error here, as the service might not be running.
+		fmt.Fprintln(os.Stderr, "Warning: could not stop service (it may not be running):", err)
+	}
 
 	// Disable the service to prevent it from starting on boot.
 	fmt.Println("Disabling procguard service...")
-	exec.Command("systemctl", "--user", "disable", "procguard.service").Run()
+	if err := exec.Command("systemctl", "--user", "disable", "procguard.service").Run(); err != nil {
+		return fmt.Errorf("error disabling service: %w", err)
+	}
 
 	servicePath, err := getServiceFilePath()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error getting service file path:", err)
-		os.Exit(1)
+		return fmt.Errorf("error getting service file path: %w", err)
 	}
 
 	// Remove the service file from the systemd user directory.
 	if err := os.Remove(servicePath); err != nil {
-		fmt.Fprintln(os.Stderr, "Error removing service file:", err)
+		return fmt.Errorf("error removing service file: %w", err)
 	}
 
 	// Update the configuration to reflect that the service has been removed.
 	cfg.SystemdInstalled = false
 	if err := cfg.Save(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error saving config:", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving config: %w", err)
 	}
 
 	// Reload the systemd daemon to apply the changes.
 	fmt.Println("Reloading systemd user daemon...")
-	exec.Command("systemctl", "--user", "daemon-reload").Run()
+	if err := exec.Command("systemctl", "--user", "daemon-reload").Run(); err != nil {
+		return fmt.Errorf("error reloading systemd: %w", err)
+	}
 
 	fmt.Println("Service removed.")
+	return nil
 }

@@ -1,6 +1,6 @@
 //go:build windows
 
-package block
+package blocklist
 
 import (
 	"os/exec"

@@ -12,6 +12,7 @@ GO_RUN=$(GO_CMD) run
 GO_FMT=$(GO_CMD) fmt
 GO_CLEAN=$(GO_CMD) clean
 GO_INSTALL=$(GO_CMD) install
+GO_TEST=$(GO_CMD) test
 
 # Binary name
 BINARY_LINUX_NAME=procguard
@@ -21,7 +22,7 @@ NIX_BUILD=result
 # Build flags
 LDFLAGS = -ldflags="-s -w -X main.version=$(VERSION)"
 
-.PHONY: all build-linux build-windows run fmt clean install
+.PHONY: all build-linux build-windows run fmt clean test install
 
 all: build-linux build-windows
 
@@ -41,6 +42,9 @@ run:
 fmt:
 	@echo "Formatting code..."
 	$(GO_FMT) ./...
+
+test:
+	$(GO_TEST) ./...
 
 clean:
 	@echo "Cleaning..."

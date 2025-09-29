@@ -7,7 +7,6 @@ import (
 func init() {
 	// register sub-commands
 	BlockCmd.AddCommand(BlockAddCmd, BlockRmCmd, BlockListCmd, BlockClearCmd, BlockSaveCmd, BlockFindCmd, BlockLoadCmd)
-	BlockCmd.PersistentFlags().String("token", "", "Auth token for GUI calls")
 }
 
 var BlockCmd = &cobra.Command{
