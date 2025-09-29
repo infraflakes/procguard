@@ -80,13 +80,21 @@ func installSystemdServiceE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("error opening source executable: %w", err)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		if err := sourceFile.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing source file: %v\n", err)
+		}
+	}()
 
 	destFile, err := os.Create(destPath)
 	if err != nil {
 		return fmt.Errorf("error creating destination executable: %w", err)
 	}
-	defer destFile.Close()
+	defer func() {
+		if err := destFile.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing destination file: %v\n", err)
+		}
+	}()
 
 	if _, err = io.Copy(destFile, sourceFile); err != nil {
 		return fmt.Errorf("error copying executable: %w", err)

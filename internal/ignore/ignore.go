@@ -71,29 +71,23 @@ var DefaultLinux = []string{
 
 // DefaultWindows is the default list of process names to ignore on Windows.
 var DefaultWindows = []string{
+	// Core system processes that might run at Medium IL and are safe to ignore.
 	"System Idle Process",
 	"System",
 	"smss.exe",
-	"services.exe",
 	"lsass.exe",
 	"wininit.exe",
 	"fontdrvhost.exe",
 	"dwm.exe",
-	"svchost.exe",
-	"RuntimeBroker.exe",
-	"dllhost.exe",
-	"taskhostw.exe",
+	"spoolsv.exe",
+	"services.exe", // Parent process check should handle most children, but we can ignore the parent itself.
 }
-
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.
 // It performs both exact and prefix matching, and handles truncated names.
 func IsIgnored(name string, ignoreList []string) bool {
 	// Handle truncated names that start with a dot, like ".gvfsd-http-wr"
-	nameToCompare := name
-	if strings.HasPrefix(nameToCompare, ".") {
-		nameToCompare = strings.TrimPrefix(nameToCompare, ".")
-	}
+	nameToCompare := strings.TrimPrefix(name, ".")
 
 	for _, ignored := range ignoreList {
 		if strings.HasSuffix(ignored, "-") {
