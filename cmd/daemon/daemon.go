@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"procguard/internal/blocklist"
+	"procguard/internal/ignore"
 	"procguard/internal/logger"
 	"slices"
 	"strings"
@@ -27,6 +28,7 @@ func Start() {
 
 	// Goroutine for logging processes
 	go func() {
+		ignoreList := ignore.DefaultLinux
 		logTick := time.NewTicker(15 * time.Second)
 		defer logTick.Stop()
 		for range logTick.C {
@@ -38,9 +40,18 @@ func Start() {
 				}
 				seen[p.Pid] = true
 
+				uids, err := p.Uids()
+				if err != nil || len(uids) == 0 {
+					continue // Skip if we can't get UID
+				}
+				// Stage 1: Skip system users (UID < 1000)
+				if uids[0] < 1000 {
+					continue
+				}
+
 				name, _ := p.Name()
-				if name == "" || strings.HasPrefix(name, "kworker") || name == "kthreadd" {
-					continue // Skip processes with no name or kworker threads.
+				if name == "" {
+					continue // Skip processes with no name
 				}
 
 				// Get the parent process information for more detailed logging.
@@ -49,6 +60,11 @@ func Start() {
 					continue // Skip processes with no parent
 				}
 				parentName, _ := parent.Name()
+
+				// Stage 2: Skip user-level system processes by name
+				if ignore.IsIgnored(name, ignoreList) || ignore.IsIgnored(parentName, ignoreList) {
+					continue
+				}
 
 				// Log the process information in a structured format.
 				logger.Printf("%s | %s | %d | %s\n",
