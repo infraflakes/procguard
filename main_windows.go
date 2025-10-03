@@ -1,3 +1,5 @@
+//go:build windows
+
 package main
 
 //go:generate go run github.com/akavel/rsrc -manifest procguard.manifest -o rsrc.syso

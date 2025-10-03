@@ -2,7 +2,7 @@ package block
 
 import (
 	"fmt"
-	"procguard/internal/blocklist"
+	"procguard/internal/client"
 
 	"github.com/spf13/cobra"
 )
@@ -14,7 +14,9 @@ var BlockLoadCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		filePath := args[0]
-		if err := blocklist.LoadFromFile(filePath); err != nil {
+		c := client.New()
+
+		if err := c.LoadBlocklist(filePath); err != nil {
 			return err
 		}
 

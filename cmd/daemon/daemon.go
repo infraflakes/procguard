@@ -1,8 +1,9 @@
 package daemon
 
 import (
+	"encoding/json"
 	"log"
-	"procguard/internal/blocklist"
+	"net/http"
 	"procguard/internal/logger"
 	"slices"
 	"strings"
@@ -32,7 +33,11 @@ func Start() {
 		killTick := time.NewTicker(100 * time.Millisecond)
 		defer killTick.Stop()
 		for range killTick.C {
-			list, _ := blocklist.Load()
+			list, err := fetchBlocklist()
+			if err != nil {
+				logger.Printf("failed to fetch blocklist: %v", err)
+				continue
+			}
 			if len(list) == 0 {
 				continue
 			}
@@ -56,4 +61,23 @@ func Start() {
 			}
 		}
 	}(logger)
+}
+
+func fetchBlocklist() ([]string, error) {
+	resp, err := http.Get("http://127.0.0.1:58141/api/blocklist")
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logger.Get().Printf("Error closing response body: %v", err)
+		}
+	}()
+
+	var blocklist []string
+	if err := json.NewDecoder(resp.Body).Decode(&blocklist); err != nil {
+		return nil, err
+	}
+
+	return blocklist, nil
 }

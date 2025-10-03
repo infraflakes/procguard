@@ -1,9 +1,7 @@
 package block
 
 import (
-	"fmt"
-	"procguard/internal/blocklist"
-	"procguard/internal/platform"
+	"procguard/internal/client"
 
 	"github.com/spf13/cobra"
 )
@@ -18,19 +16,10 @@ var BlockRmCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		status, err := blocklist.Remove(name)
-		if err != nil {
+		c := client.New()
+
+		if err := c.Unblock(name); err != nil {
 			return err
-		}
-
-		if status == "not found" {
-			isJSON, _ := cmd.Flags().GetBool("json")
-			Reply(isJSON, "not found", name)
-			return nil
-		}
-
-		if err := platform.UnblockExecutable(name); err != nil {
-			return fmt.Errorf("failed to unblock executable: %w", err)
 		}
 
 		isJSON, _ := cmd.Flags().GetBool("json")

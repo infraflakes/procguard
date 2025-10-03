@@ -1,9 +1,7 @@
 package block
 
 import (
-	"fmt"
-	"procguard/internal/blocklist"
-	"procguard/internal/platform"
+	"procguard/internal/client"
 
 	"github.com/spf13/cobra"
 )
@@ -18,21 +16,10 @@ var BlockAddCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		status, err := blocklist.Add(name)
-		if err != nil {
+		c := client.New()
+
+		if err := c.Block(name); err != nil {
 			return err
-		}
-
-		if status == "exists" {
-			isJSON, _ := cmd.Flags().GetBool("json")
-			Reply(isJSON, "exists", name)
-			return nil
-		}
-
-		if err := platform.BlockExecutable(name); err != nil {
-			// If blocking fails, we should probably roll back adding to the list,
-			// but for now, we'll just return the error.
-			return fmt.Errorf("failed to block executable: %w", err)
 		}
 
 		isJSON, _ := cmd.Flags().GetBool("json")

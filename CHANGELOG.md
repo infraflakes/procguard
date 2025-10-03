@@ -1,27 +1,22 @@
 # Changelog
 
-## ♻️ Refactoring
+### 🚀 Features & Architectural Changes
 
--   **Platform-Specific Logic**:
-    -   Introduced a new `internal/platform` package to abstract all OS-specific operations.
-    -   Consolidated duplicated file-blocking logic into the new package, using build tags to provide the correct implementation for each OS.
-    -   Removed the redundant `cmd/unix/block_unix.go` and `cmd/windows/block_win.go` files.
+-   **Modular Monolith Architecture**: The application has been restructured into a "modular monolith". This provides better separation of concerns and an improved development/debugging experience while maintaining a single binary for simple distribution.
+    -   Introduced `procguard run api` and `procguard run daemon` commands to run the API/GUI and the background daemon as independent services.
+    -   The main `procguard` command now acts as a pure CLI client that communicates with the API service.
+    -   Running `procguard.exe` without arguments automatically start the API and daemon services in the background and open the web GUI.
 
--   **Configuration Management**:
-    -   Simplified configuration by unifying the separate Windows and Linux `Config` structs into a single, cross-platform struct in `internal/config/config.go`.
-    -   Removed the now-unnecessary `internal/config/config_others.go` and `internal/config/config_windows.go` files.
+### ♻️ Refactoring
 
--   **GUI Handler Organization**:
-    -   Decomposed the large `cmd/gui/handlers.go` file into smaller, more focused files based on their API functionality (`auth_handlers.go`, `blocklist_handlers.go`, etc.). This makes the GUI's backend code easier to navigate and maintain.
+-   **CLI API Client**:
+    -   Created a new `internal/client` package to act as an API client for all CLI commands.
+    -   Refactored the `procguard block` sub-commands to use the new client, centralizing API communication logic and cleaning up the command implementations.
 
--   **Systemd Code Structure**:
-    -   Broke down the large `installSystemdServiceE` and `removeSystemdServiceE` functions in `cmd/unix/systemd_linux.go` into smaller, single-purpose functions, improving readability.
+### 🐛 Bug Fixes
 
--   **Separation of Concerns**:
-    -   Moved the core business logic for managing the blocklist from the `cmd/block` package to the `internal/blocklist` package.
-    -   The `cmd/block` commands now act as a thin layer, calling the centralized logic in the `internal` package.
-
-## 🐛 Bug Fixes
-
--   **Error Handling**:
-    -   Corrected several places in the `internal/blocklist` package where errors from JSON marshaling and unmarshaling were being ignored. This prevents the application from failing silently or corrupting the blocklist data.
+-   **Complete Uninstallation**: Fixed a critical bug where the uninstaller would leave background services running. The `uninstall` command now finds and terminates all running `procguard` processes before removing files.
+-   **Code Quality & Linting**:
+    -   Resolved all `golangci-lint` issues, including multiple `errcheck` warnings where errors were not being handled.
+    -   Fixed a platform-specific build error by correctly isolating Windows-only code.
+    -   Removed dead code related to the old startup mechanism.

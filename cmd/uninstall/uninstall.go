@@ -7,6 +7,7 @@ import (
 	"procguard/cmd/auth"
 	"strings"
 
+	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +40,41 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	fmt.Println("Stopping all ProcGuard services...")
+	if err := killOtherProcGuardProcesses(); err != nil {
+		// Log a warning but continue with uninstallation
+		fmt.Fprintf(os.Stderr, "Warning: could not kill all running processes: %v\n", err)
+	}
+
 	fmt.Println("Uninstalling ProcGuard...")
 	return platformUninstall()
+}
+
+func killOtherProcGuardProcesses() error {
+	currentPid := os.Getpid()
+	procs, err := process.Processes()
+	if err != nil {
+		return fmt.Errorf("failed to get processes: %w", err)
+	}
+
+	for _, p := range procs {
+		if p.Pid == int32(currentPid) {
+			continue
+		}
+
+		name, err := p.Name()
+		if err != nil {
+			// Ignore processes we can't get the name of
+			continue
+		}
+
+		if strings.HasPrefix(strings.ToLower(name), "procguard") {
+			fmt.Printf("Killing running ProcGuard process: %s (pid %d)\n", name, p.Pid)
+			if err := p.Kill(); err != nil {
+				// Log a warning but continue
+				fmt.Fprintf(os.Stderr, "Warning: failed to kill process %s (pid %d): %v\n", name, p.Pid, err)
+			}
+		}
+	}
+	return nil
 }
