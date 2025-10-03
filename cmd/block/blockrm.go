@@ -3,8 +3,7 @@ package block
 import (
 	"fmt"
 	"procguard/internal/blocklist"
-	"slices"
-	"strings"
+	"procguard/internal/platform"
 
 	"github.com/spf13/cobra"
 )
@@ -15,33 +14,27 @@ func init() {
 
 var BlockRmCmd = &cobra.Command{
 	Use:   "rm <exe>",
-	Short: "Remove program from block-list",
+	Short: "Remove program from block-list and unblock executable",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// All entries are stored in lowercase for case-insensitive matching.
-		base := strings.ToLower(args[0])
-		list, err := blocklist.Load()
+		name := args[0]
+		status, err := blocklist.Remove(name)
 		if err != nil {
 			return err
 		}
 
-		// Find the index of the program to be removed.
-		idx := slices.Index(list, base)
-		if idx == -1 {
+		if status == "not found" {
 			isJSON, _ := cmd.Flags().GetBool("json")
-			Reply(isJSON, "not found", base)
+			Reply(isJSON, "not found", name)
 			return nil
 		}
 
-		// Remove the element from the list.
-		list = slices.Delete(list, idx, idx+1)
-		if err := blocklist.Save(list); err != nil {
-			return fmt.Errorf("save: %w", err)
+		if err := platform.UnblockExecutable(name); err != nil {
+			return fmt.Errorf("failed to unblock executable: %w", err)
 		}
 
-		// Respond to the user with the result of the operation.
 		isJSON, _ := cmd.Flags().GetBool("json")
-		Reply(isJSON, "removed", base)
+		Reply(isJSON, "removed", name)
 		return nil
 	},
 }

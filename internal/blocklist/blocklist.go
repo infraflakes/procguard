@@ -2,9 +2,12 @@ package blocklist
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"time"
 )
 
 const blockListFile = "blocklist.json"
@@ -26,7 +29,9 @@ func Load() ([]string, error) {
 	}
 
 	var list []string
-	_ = json.Unmarshal(b, &list)
+	if err := json.Unmarshal(b, &list); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal blocklist: %w", err)
+	}
 
 	// Normalize all entries to lowercase for case-insensitive comparison.
 	for i := range list {
@@ -49,11 +54,120 @@ func Save(list []string) error {
 	p := filepath.Join(cacheDir, "procguard", blockListFile)
 
 	// Marshal the list to JSON with indentation for readability.
-	b, _ := json.MarshalIndent(list, "", "  ")
+	b, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal blocklist: %w", err)
+	}
 	if err := os.WriteFile(p, b, 0600); err != nil {
 		return err
 	}
 
 	// Apply platform-specific file locking to prevent unauthorized modification.
 	return platformLock(p) // build-tag dispatch
+}
+
+// Add adds a program to the blocklist.
+func Add(name string) (string, error) {
+	list, err := Load()
+	if err != nil {
+		return "", err
+	}
+
+	lowerName := strings.ToLower(name)
+	for _, v := range list {
+		if v == lowerName {
+			return "exists", nil
+		}
+	}
+
+	list = append(list, lowerName)
+	if err := Save(list); err != nil {
+		return "", fmt.Errorf("save: %w", err)
+	}
+
+	return "added", nil
+}
+
+// Remove removes a program from the blocklist.
+func Remove(name string) (string, error) {
+	list, err := Load()
+	if err != nil {
+		return "", err
+	}
+
+	lowerName := strings.ToLower(name)
+	idx := slices.Index(list, lowerName)
+	if idx == -1 {
+		return "not found", nil
+	}
+
+	list = slices.Delete(list, idx, idx+1)
+	if err := Save(list); err != nil {
+		return "", fmt.Errorf("save: %w", err)
+	}
+
+	return "removed", nil
+}
+
+// Clear clears the blocklist.
+func Clear() error {
+	return Save([]string{})
+}
+
+// SaveToFile saves the current blocklist to a file.
+func SaveToFile(path string) error {
+	list, err := Load()
+	if err != nil {
+		return err
+	}
+
+	header := map[string]interface{}{
+		"exported_at": time.Now().Format(time.RFC3339),
+		"blocked":     list,
+	}
+
+	b, err := json.MarshalIndent(header, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal blocklist: %w", err)
+	}
+	if err := os.WriteFile(path, b, 0644); err != nil {
+		return fmt.Errorf("save: %w", err)
+	}
+
+	return nil
+}
+
+// LoadFromFile loads a blocklist from a file, merging it with the existing list.
+func LoadFromFile(path string) error {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("load: %w", err)
+	}
+
+	var newEntries []string
+	var savedList struct {
+		Blocked []string `json:"blocked"`
+	}
+
+	err = json.Unmarshal(content, &newEntries)
+	if err != nil {
+		err2 := json.Unmarshal(content, &savedList)
+		if err2 != nil {
+			return fmt.Errorf("load: invalid JSON format in %s", path)
+		}
+		newEntries = savedList.Blocked
+	}
+
+	existingList, err := Load()
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range newEntries {
+		if !slices.Contains(existingList, entry) {
+			existingList = append(existingList, entry)
+		}
+	}
+
+	return Save(existingList)
 }

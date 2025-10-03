@@ -3,7 +3,7 @@ package block
 import (
 	"fmt"
 	"procguard/internal/blocklist"
-	"strings"
+	"procguard/internal/platform"
 
 	"github.com/spf13/cobra"
 )
@@ -14,32 +14,27 @@ func init() {
 
 var BlockAddCmd = &cobra.Command{
 	Use:   "add <name>",
-	Short: "Add program to block-list (OS-agnostic)",
+	Short: "Add program to block-list and block executable",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// All entries are stored in lowercase for case-insensitive matching.
-		name := strings.ToLower(args[0])
-		list, err := blocklist.Load()
+		name := args[0]
+		status, err := blocklist.Add(name)
 		if err != nil {
 			return err
 		}
 
-		// Check if the program is already in the blocklist.
-		for _, v := range list {
-			if v == name {
-				isJSON, _ := cmd.Flags().GetBool("json")
-				Reply(isJSON, "exists", name)
-				return nil
-			}
+		if status == "exists" {
+			isJSON, _ := cmd.Flags().GetBool("json")
+			Reply(isJSON, "exists", name)
+			return nil
 		}
 
-		// Add the new program to the list and save it.
-		list = append(list, name)
-		if err := blocklist.Save(list); err != nil {
-			return fmt.Errorf("save: %w", err)
+		if err := platform.BlockExecutable(name); err != nil {
+			// If blocking fails, we should probably roll back adding to the list,
+			// but for now, we'll just return the error.
+			return fmt.Errorf("failed to block executable: %w", err)
 		}
 
-		// Respond to the user with the result of the operation.
 		isJSON, _ := cmd.Flags().GetBool("json")
 		Reply(isJSON, "added", name)
 		return nil
