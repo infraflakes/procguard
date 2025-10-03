@@ -1,45 +1,48 @@
 # ProcGuard
 
-ProcGuard is a cross-platform tool for monitoring and controlling processes on your system, featuring a simple web-based GUI.
+ProcGuard is a cross-platform tool for monitoring and controlling processes on your system. It is composed of three main components: a daemon, an API server with a web-based GUI, and a command-line interface (CLI).
 
-## Main Usage (GUI Mode)
+## Usage
 
-The easiest way to use ProcGuard is to run the executable directly with no commands:
+ProcGuard is designed as a modular system. You run the services you need (the API server and the daemon) and then interact with them through the web GUI or the CLI.
+
+### 1. Running the Services
+
+You need to run the `api` and `daemon` services in separate terminal windows.
+
+**To run the API server (which includes the web GUI):**
 
 ```bash
-./procguard
-# On Windows, double-click procguard.exe
+procguard run api
 ```
 
-This will:
-1.  **Check for an existing instance.** If ProcGuard is already running, it will simply open a new browser tab to the dashboard and exit.
-2.  **Start the backend daemon.** If this is the first instance, it will start the background monitoring process.
-3.  **Launch the GUI.** It will start a local web server and automatically open your default browser to the dashboard.
+This will start the server, and you can access the GUI by navigating to `http://127.0.0.1:58141` in your web browser.
 
-### GUI Features
+**To run the background daemon:**
+
+```bash
+procguard run daemon
+```
+
+This will start the background process that monitors and blocks applications based on the blocklist provided by the API service.
+
+### 2. Using the Web GUI
+
+Once the `api` service is running, you can open your browser to `http://127.0.0.1:58141` to access the GUI.
+
+**GUI Features:**
 - **Search:** Search the process logs for specific application names.
-- **Blocklist Management:** View all currently blocked applications, select multiple apps, and unblock them in a single action.
+- **Blocklist Management:** View all currently blocked applications, add new ones, and unblock them.
 
-## CLI Commands
+### 3. Using the CLI
 
-While GUI mode is the primary way to use the application, the following CLI commands are still available for scripting and advanced usage.
+The `procguard` command-line tool allows you to interact with the system from your terminal. It communicates with the `api` service, so make sure the API server is running before using these commands.
 
-### `procguard` (no command)
-Launches the smart-starting GUI and daemon. If an instance is already running, it just opens the browser.
+#### `procguard find <name>`
+Search the process log for a specific program name.
 
-### `procguard gui`
-Explicitly starts the GUI and web server. This is now the same as the default command.
-
-### `procguard daemon`
-Runs the ProcGuard daemon in the background. The daemon performs two main tasks:
-1.  Logs running processes to `~/.cache/procguard/events.log`.
-2.  Kills any running process that is on the blocklist.
-
-### `procguard find <name>`
-Search the process log for a specific program name from the command line.
-
-### `procguard block`
-Manage the process blocklist from the command line.
+#### `procguard block`
+Manage the process blocklist.
 - `procguard block add <name>`: Add a program to the blocklist.
 - `procguard block rm <name>`: Remove a program from the blocklist.
 - `procguard block list`: Show the current blocklist.
@@ -47,7 +50,7 @@ Manage the process blocklist from the command line.
 - `procguard block save <file>`: Save the current blocklist to a file.
 - `procguard block load <file>`: Load a blocklist from a file.
 
-### `procguard systemd` (Linux only)
+#### `procguard systemd` (Linux only)
 Manage the systemd user service for the ProcGuard daemon.
 - `procguard systemd install`: Install and enable the systemd user service.
 - `procguard systemd remove`: Disable and remove the systemd user service.
