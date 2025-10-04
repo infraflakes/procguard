@@ -81,5 +81,3 @@ func removeBackup() error {
 	}
 	return os.RemoveAll(filepath.Join(localAppData, "ProcGuard"))
 }
-
-

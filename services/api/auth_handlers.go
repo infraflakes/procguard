@@ -90,14 +90,14 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 
 	cfg.PasswordHash = hash
 	if err := cfg.Save(); err != nil {
-			http.Error(w, "Failed to save password", http.StatusInternalServerError)
-			return
-		}
-	
-		s.mu.Lock()
-		s.isAuthenticated = true
-		s.mu.Unlock()
-		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
-			s.logger.Printf("Error encoding response: %v", err)
-		}
+		http.Error(w, "Failed to save password", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	s.isAuthenticated = true
+	s.mu.Unlock()
+	if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
+		s.logger.Printf("Error encoding response: %v", err)
+	}
 }

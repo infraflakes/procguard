@@ -22,7 +22,7 @@ func HandleDefaultStartup() {
 	_, err := http.Get(guiUrl + "/ping")
 	if err == nil {
 		// Instance is already running. Just open the browser and exit.
-	openBrowser(guiUrl)
+		openBrowser(guiUrl)
 		return
 	}
 
@@ -31,7 +31,7 @@ func HandleDefaultStartup() {
 
 	// Set up autostart for Windows if applicable.
 
-daemon.EnsureAutostartTask()
+	daemon.EnsureAutostartTask()
 
 	// Start the API and daemon services in the background.
 	exePath, err := os.Executable()
