@@ -22,3 +22,22 @@ function connect() {
 }
 
 connect();
+
+// Listen for messages from the web GUI for installation detection.
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+  if (request.message === 'is_installed') {
+    sendResponse({ status: 'installed', version: chrome.runtime.getManifest().version });
+  }
+  // Return true to indicate you wish to send a response asynchronously
+  return true;
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Only log when the tab is fully loaded and has a valid URL.
+  if (changeInfo.status === 'complete' && tab.url && (tab.url.startsWith('http') || tab.url.startsWith('https'))) {
+    if (port) {
+      console.log(`Logging URL: ${tab.url}`);
+      port.postMessage({ type: 'log_url', payload: tab.url });
+    }
+  }
+});

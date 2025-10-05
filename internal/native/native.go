@@ -50,18 +50,25 @@ func Run() {
 
 		log.Printf("Received message: Type=%s, Payload=%s", req.Type, req.Payload)
 
-		// For now, just echo the request back.
-		resp := Response{
-			Type:    "echo",
-			Payload: req.Payload,
+		// Handle the message based on its type.
+		switch req.Type {
+		case "ping":
+			// For now, just echo the request back.
+			resp := Response{
+				Type:    "echo",
+				Payload: req.Payload,
+			}
+			sendMessage(resp)
+		case "log_url":
+			log.Printf("URL: %s", req.Payload)
+		default:
+			// Optionally handle unknown message types
 		}
-
-		sendMessage(resp)
 	}
 }
 
 func sendMessage(resp Response) {
-	log := logger.Get()
+	log := logger.GetWebLogger()
 	b, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Error marshalling response: %v", err)
