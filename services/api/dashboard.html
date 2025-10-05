@@ -21,6 +21,7 @@
   <nav>
     <button onclick="showView('search-view')">Tìm kiếm</button>
     <button onclick="showView('blocklist-view')">Xem ứng dụng bị chặn</button>
+    <button onclick="showView('web-view')">Web</button>
     <button onclick="showView('settings-view')">Cài đặt</button>
     <button onclick="window.location.href='/logout'" style="float: right;">Đăng xuất</button>
   </nav>
@@ -68,6 +69,14 @@
     </div>
   </div>
 
+  <div id="web-view" style="display:none;">
+    <h2>Web Monitoring</h2>
+    <div id="web-status-container">
+      <p>Extension Status: <span id="extension-status">Unknown</span></p>
+      <button id="install-extension-btn" style="display:none;">Install Extension</button>
+    </div>
+  </div>
+
   <div id="uninstall-modal" class="modal" style="display: none;">
     <div class="modal-content">
       <span class="close-button" onclick="closeUninstallModal()">&times;</span>
@@ -92,12 +101,17 @@
     const searchView = document.getElementById('search-view');
     const blocklistView = document.getElementById('blocklist-view');
     const settingsView = document.getElementById('settings-view');
+    const webView = document.getElementById('web-view');
     const uninstallModal = document.getElementById('uninstall-modal');
     const uninstallForm = document.getElementById('uninstall-form');
     const uninstallPasswordInput = document.getElementById('uninstall-password');
     const uninstallError = document.getElementById('uninstall-error');
     const blockStatus = document.getElementById('block-status');
     const unblockStatus = document.getElementById('unblock-status');
+    const extensionStatus = document.getElementById('extension-status');
+    const installExtensionBtn = document.getElementById('install-extension-btn');
+
+    const EXTENSION_ID = 'ilaocldmkhlifnikhinkmiepekpbefoh';
 
     function setDefaults() {
         const now = new Date();
@@ -113,11 +127,28 @@
         searchView.style.display = 'none';
         blocklistView.style.display = 'none';
         settingsView.style.display = 'none';
+        webView.style.display = 'none';
         document.getElementById(viewName).style.display = 'block';
 
         if (viewName === 'blocklist-view') {
             loadBlocklist();
         }
+    }
+
+    function checkExtension() {
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        chrome.runtime.sendMessage(EXTENSION_ID, { message: 'is_installed' }, (response) => {
+          if (chrome.runtime.lastError) {
+            extensionStatus.textContent = 'Not Installed';
+            installExtensionBtn.style.display = 'block';
+          } else {
+            extensionStatus.textContent = `Installed (v${response.version})`;
+            installExtensionBtn.style.display = 'none';
+          }
+        });
+      } else {
+        extensionStatus.textContent = 'Not a Chrome-based browser';
+      }
     }
 
     async function search(range){
@@ -239,6 +270,8 @@
         loadBlocklist(); // Refresh the list
     }
 
+
+
     async function uninstall() {
         uninstallModal.style.display = 'block';
     }
@@ -272,6 +305,7 @@
     // Set defaults and show search view by default
     setDefaults();
     showView('search-view');
+    checkExtension();
   </script>
 </body>
 </html>
