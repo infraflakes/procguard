@@ -74,10 +74,10 @@ func installNativeHost() error {
 
 func createManifest(manifestPath, exePath, extensionId string) error {
 	manifest := map[string]interface{}{
-		"name":              hostName,
-		"description":       "ProcGuard native messaging host",
-		"path":              exePath,
-		"type":              "stdio",
+		"name":        hostName,
+		"description": "ProcGuard native messaging host",
+		"path":        exePath,
+		"type":        "stdio",
 		"allowed_origins": []string{
 			"chrome-extension://" + extensionId + "/",
 		},

@@ -4,9 +4,9 @@ package main
 
 import (
 	"os"
-	"strings"
 	"procguard/cmd"
 	"procguard/internal/native"
+	"strings"
 )
 
 func main() {

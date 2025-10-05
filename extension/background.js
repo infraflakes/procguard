@@ -1,5 +1,6 @@
 const hostName = 'com.nixuris.procguard';
 let port;
+let webBlocklist = [];
 
 function connect() {
   console.log('Connecting to native host...');
@@ -7,6 +8,10 @@ function connect() {
 
   port.onMessage.addListener((msg) => {
     console.log('Received message from native host:', msg);
+    if (msg.type === 'web_blocklist') {
+      webBlocklist = msg.payload || [];
+      console.log('Updated web blocklist:', webBlocklist);
+    }
   });
 
   port.onDisconnect.addListener(() => {
@@ -17,8 +22,8 @@ function connect() {
     setTimeout(connect, 5000);
   });
 
-  // Send a ping to the host to check the connection
-  port.postMessage({ type: 'ping', payload: 'hello from extension' });
+  // Request the blocklist on connection.
+  port.postMessage({ type: 'get_web_blocklist' });
 }
 
 connect();
@@ -32,7 +37,35 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
   return true;
 });
 
+// Listen for messages from the popup.
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'add_to_web_blocklist') {
+    if (port) {
+      port.postMessage(request);
+      // Also add it to the local blocklist immediately for a faster response.
+      if (!webBlocklist.includes(request.payload)) {
+        webBlocklist.push(request.payload);
+      }
+      sendResponse({ status: 'ok' });
+    }
+  }
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Check if the site is in the blocklist.
+  if (tab.url) {
+    try {
+      const url = new URL(tab.url);
+      const domain = url.hostname;
+      if (webBlocklist.includes(domain)) {
+        chrome.tabs.update(tabId, { url: chrome.runtime.getURL('blocked.html') });
+        return;
+      }
+    } catch (e) {
+      // Ignore invalid URLs
+    }
+  }
+
   // Only log when the tab is fully loaded and has a valid URL.
   if (changeInfo.status === 'complete' && tab.url && (tab.url.startsWith('http') || tab.url.startsWith('https'))) {
     if (port) {

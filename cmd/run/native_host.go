@@ -15,4 +15,3 @@ var nativeHostCmd = &cobra.Command{
 		native.Run()
 	},
 }
-

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"procguard/internal/blocklist/webblocklist"
 	"procguard/internal/logger"
 )
 
@@ -16,8 +17,8 @@ type Request struct {
 
 // Response is the message sent to the extension.
 type Response struct {
-	Type    string `json:"type"`
-	Payload string `json:"payload"`
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload"`
 }
 
 // Run starts the native messaging host.
@@ -61,6 +62,21 @@ func Run() {
 			sendMessage(resp)
 		case "log_url":
 			log.Printf("URL: %s", req.Payload)
+		case "get_web_blocklist":
+			list, err := webblocklist.Load()
+			if err != nil {
+				log.Printf("Error loading web blocklist: %v", err)
+				continue
+			}
+			resp := Response{
+				Type:    "web_blocklist",
+				Payload: list,
+			}
+			sendMessage(resp)
+		case "add_to_web_blocklist":
+			if _, err := webblocklist.Add(req.Payload); err != nil {
+				log.Printf("Error adding to web blocklist: %v", err)
+			}
 		default:
 			// Optionally handle unknown message types
 		}

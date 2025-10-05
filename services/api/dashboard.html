@@ -21,7 +21,7 @@
   <nav>
     <button onclick="showView('search-view')">Tìm kiếm</button>
     <button onclick="showView('blocklist-view')">Xem ứng dụng bị chặn</button>
-    <button onclick="showView('web-view')">Web</button>
+    <button onclick="showView('web-view')">Giám sát Web</button>
     <button onclick="showView('settings-view')">Cài đặt</button>
     <button onclick="window.location.href='/logout'" style="float: right;">Đăng xuất</button>
   </nav>
@@ -70,10 +70,10 @@
   </div>
 
   <div id="web-view" style="display:none;">
-    <h2>Web Monitoring</h2>
+    <h2>Giám sát Web</h2>
     <div id="web-status-container">
-      <p>Extension Status: <span id="extension-status">Unknown</span></p>
-      <button id="install-extension-btn" style="display:none;">Install Extension</button>
+      <p>Trạng thái Tiện ích: <span id="extension-status">Không rõ</span></p>
+      <button id="install-extension-btn" style="display:none;">Cài đặt Tiện ích</button>
     </div>
   </div>
 
@@ -139,15 +139,15 @@
       if (typeof chrome !== 'undefined' && chrome.runtime) {
         chrome.runtime.sendMessage(EXTENSION_ID, { message: 'is_installed' }, (response) => {
           if (chrome.runtime.lastError) {
-            extensionStatus.textContent = 'Not Installed';
+            extensionStatus.textContent = 'Chưa cài đặt';
             installExtensionBtn.style.display = 'block';
           } else {
-            extensionStatus.textContent = `Installed (v${response.version})`;
+            extensionStatus.textContent = `Đã cài đặt (v${response.version})`;
             installExtensionBtn.style.display = 'none';
           }
         });
       } else {
-        extensionStatus.textContent = 'Not a Chrome-based browser';
+        extensionStatus.textContent = 'Không phải trình duyệt dựa trên Chrome';
       }
     }
 

@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	once       sync.Once
-	webOnce    sync.Once
-	appLogger  *log.Logger
-	webLogger  *log.Logger
+	once      sync.Once
+	webOnce   sync.Once
+	appLogger *log.Logger
+	webLogger *log.Logger
 )
 
 // Get returns a singleton instance of the main application logger.
