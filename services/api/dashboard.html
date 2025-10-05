@@ -19,46 +19,74 @@
 </head>
 <body>
   <nav>
-    <button onclick="showView('search-view')">Tìm kiếm</button>
-    <button onclick="showView('blocklist-view')">Xem ứng dụng bị chặn</button>
-    <button onclick="showView('web-view')">Giám sát Web</button>
-    <button onclick="showView('settings-view')">Cài đặt</button>
+    <button onclick="showTopLevelView('welcome-view')">Trang chủ</button>
+    <button onclick="showTopLevelView('app-management-view')">Quản lý Ứng dụng</button>
+    <button onclick="showTopLevelView('web-management-view')">Quản lý Web</button>
+    <button onclick="showTopLevelView('settings-view')">Cài đặt</button>
     <button onclick="window.location.href='/logout'" style="float: right;">Đăng xuất</button>
   </nav>
 
-  <div id="search-view">
-    <h2>Bảng điều khiển ProcGuard</h2>
-    <div id="search-container">
-      <input id="q" placeholder="nhập tên ứng dụng">
-      <button onclick="search()">Tìm kiếm Log</button>
-      <button onclick="block()">Chặn mục đã chọn</button>
-      <span id="block-status" class="status-message"></span>
-    </div>
-    <div id="time-filter-container">
-        <span>Lọc theo thời gian:</span>
-        <button onclick="search({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
-        <button onclick="search({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
-        <button onclick="search({since: '7 days ago', until: 'now'})">7 ngày qua</button>
-        <br>
-        <span>Từ: </span><input type="date" id="since_date"> <input type="time" id="since_time" step="60">
-        <span>Đến: </span><input type="date" id="until_date"> <input type="time" id="until_time" step="60">
-        <button onclick="search()">Xác nhận</button>
-    </div>
-    <h3>Kết quả tìm kiếm</h3>
-    <div id="results"></div>
+  <div id="welcome-view">
+    <h2>Chào mừng đến với ProcGuard</h2>
+    <p>Chọn một mục từ thanh điều hướng để bắt đầu.</p>
   </div>
 
-  <div id="blocklist-view" style="display:none;">
-    <h2>Các ứng dụng bị chặn</h2>
-    <div id="blocklist-controls">
-        <button onclick="unblockSelected()">Bỏ chặn mục đã chọn</button>
-        <button onclick="clearBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
-        <button onclick="saveBlocklist()">Lưu danh sách chặn</button>
-        <button onclick="document.getElementById('load-input').click()">Tải lên danh sách chặn</button>
-        <input type="file" id="load-input" style="display: none;" onchange="loadBlocklistFile(event)">
-        <span id="unblock-status" class="status-message"></span>
+  <div id="app-management-view" style="display:none;">
+    <div class="sub-nav">
+      <button onclick="showSubView('search-view', 'app-management-view')">Tìm kiếm</button>
+      <button onclick="showSubView('blocklist-view', 'app-management-view')">Xem ứng dụng bị chặn</button>
     </div>
-    <div id="blocklist-items"></div>
+    <div id="search-view">
+      <h2>Bảng điều khiển ProcGuard</h2>
+      <div id="search-container">
+        <input id="q" placeholder="nhập tên ứng dụng">
+        <button onclick="search()">Tìm kiếm Log</button>
+        <button onclick="block()">Chặn mục đã chọn</button>
+        <span id="block-status" class="status-message"></span>
+      </div>
+      <div id="time-filter-container">
+          <span>Lọc theo thời gian:</span>
+          <button onclick="search({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
+          <button onclick="search({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
+          <button onclick="search({since: '7 days ago', until: 'now'})">7 ngày qua</button>
+          <br>
+          <span>Từ: </span><input type="date" id="since_date"> <input type="time" id="since_time" step="60">
+          <span>Đến: </span><input type="date" id="until_date"> <input type="time" id="until_time" step="60">
+          <button onclick="search()">Xác nhận</button>
+      </div>
+      <h3>Kết quả tìm kiếm</h3>
+      <div id="results"></div>
+    </div>
+    <div id="blocklist-view" style="display:none;">
+      <h2>Các ứng dụng bị chặn</h2>
+      <div id="blocklist-controls">
+          <button onclick="unblockSelected()">Bỏ chặn mục đã chọn</button>
+          <button onclick="clearBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
+          <button onclick="saveBlocklist()">Lưu danh sách chặn</button>
+          <button onclick="document.getElementById('load-input').click()">Tải lên danh sách chặn</button>
+          <input type="file" id="load-input" style="display: none;" onchange="loadBlocklistFile(event)">
+          <span id="unblock-status" class="status-message"></span>
+      </div>
+      <div id="blocklist-items"></div>
+    </div>
+  </div>
+
+  <div id="web-management-view" style="display:none;">
+    <div class="sub-nav">
+      <button onclick="showSubView('web-log-view', 'web-management-view')">Lịch sử Web</button>
+      <button onclick="showSubView('web-blocklist-view', 'web-management-view')">Danh sách chặn</button>
+    </div>
+    <div id="web-log-view" style="display:none;">
+      <h2>Lịch sử Truy cập Web</h2>
+      <div id="web-log-controls">
+        <button onclick="blockSelectedWebsites()">Chặn mục đã chọn</button>
+      </div>
+      <div id="web-log-items"></div>
+    </div>
+    <div id="web-blocklist-view" style="display:none;">
+      <h2>Quản lý Danh sách chặn Web</h2>
+      <div id="web-blocklist-items"></div>
+    </div>
   </div>
 
   <div id="settings-view" style="display:none;">
@@ -66,14 +94,6 @@
     <div id="settings-controls">
         <button onclick="uninstall()" style="background-color: #d9534f;">Gỡ cài đặt ProcGuard</button>
         <p><b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt ProcGuard khỏi hệ thống.</p>
-    </div>
-  </div>
-
-  <div id="web-view" style="display:none;">
-    <h2>Giám sát Web</h2>
-    <div id="web-status-container">
-      <p>Trạng thái Tiện ích: <span id="extension-status">Không rõ</span></p>
-      <button id="install-extension-btn" style="display:none;">Cài đặt Tiện ích</button>
     </div>
   </div>
 
@@ -98,10 +118,6 @@
     const untilDateInput = document.getElementById('until_date');
     const untilTimeInput = document.getElementById('until_time');
     const blocklistItems = document.getElementById('blocklist-items');
-    const searchView = document.getElementById('search-view');
-    const blocklistView = document.getElementById('blocklist-view');
-    const settingsView = document.getElementById('settings-view');
-    const webView = document.getElementById('web-view');
     const uninstallModal = document.getElementById('uninstall-modal');
     const uninstallForm = document.getElementById('uninstall-form');
     const uninstallPasswordInput = document.getElementById('uninstall-password');
@@ -110,8 +126,14 @@
     const unblockStatus = document.getElementById('unblock-status');
     const extensionStatus = document.getElementById('extension-status');
     const installExtensionBtn = document.getElementById('install-extension-btn');
+    const webBlocklistItems = document.getElementById('web-blocklist-items');
+    const webLogItems = document.getElementById('web-log-items');
 
     const EXTENSION_ID = 'ilaocldmkhlifnikhinkmiepekpbefoh';
+
+    const topLevelViews = ['welcome-view', 'app-management-view', 'web-management-view', 'settings-view'];
+    const appSubViews = ['search-view', 'blocklist-view'];
+    const webSubViews = ['web-log-view', 'web-blocklist-view'];
 
     function setDefaults() {
         const now = new Date();
@@ -123,16 +145,106 @@
         untilDateInput.value = today;
     }
 
-    function showView(viewName) {
-        searchView.style.display = 'none';
-        blocklistView.style.display = 'none';
-        settingsView.style.display = 'none';
-        webView.style.display = 'none';
+    function showTopLevelView(viewName) {
+        topLevelViews.forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
         document.getElementById(viewName).style.display = 'block';
 
-        if (viewName === 'blocklist-view') {
-            loadBlocklist();
+        // Load content for the default subview if applicable
+        if (viewName === 'app-management-view') {
+          showSubView('search-view', 'app-management-view');
+        } else if (viewName === 'web-management-view') {
+          showSubView('web-log-view', 'web-management-view');
         }
+    }
+
+    function showSubView(viewName, parentView) {
+      let subviews;
+      if (parentView === 'app-management-view') {
+        subviews = appSubViews;
+      } else if (parentView === 'web-management-view') {
+        subviews = webSubViews;
+      }
+
+      subviews.forEach(id => {
+        document.getElementById(id).style.display = 'none';
+      });
+      document.getElementById(viewName).style.display = 'block';
+
+      if (viewName === 'blocklist-view') {
+          loadBlocklist();
+      } else if (viewName === 'web-blocklist-view') {
+          loadWebBlocklist();
+      } else if (viewName === 'web-log-view') {
+          loadWebLogs();
+      }
+    }
+
+    async function loadWebLogs() {
+        const res = await fetch('/api/web-logs');
+        const data = await res.json();
+        webLogItems.innerHTML = '';
+        if (data && data.length > 0) {
+            // Reverse the array to show newest logs first
+            webLogItems.innerHTML = data.reverse().map(l => {
+                const urlString = l[1];
+                let domain = '';
+                try {
+                    const url = new URL(urlString);
+                    domain = url.hostname;
+                } catch (e) {}
+                return `<div class="result-item"><input type="checkbox" name="web-log-domain" value="${domain}"> ${l.join(' | ')}</div>`;
+            }).join('');
+        } else {
+            webLogItems.innerHTML = 'Chưa có lịch sử truy cập web.';
+        }
+    }
+
+    async function blockSelectedWebsites() {
+      const selectedDomains = Array.from(document.querySelectorAll('input[name="web-log-domain"]:checked')).map(cb => cb.value);
+      if (selectedDomains.length === 0) {
+        alert("Vui lòng chọn một trang web để chặn.");
+        return;
+      }
+      
+      const uniqueDomains = [...new Set(selectedDomains)];
+
+      for (const domain of uniqueDomains) {
+        await fetch('/api/web-blocklist/add', { 
+          method: 'POST', 
+          headers: {'Content-Type': 'application/json'}, 
+          body: JSON.stringify({ domain: domain })
+        });
+      }
+
+      alert('Các trang web đã chọn đã được thêm vào danh sách chặn.');
+      // Uncheck all boxes
+      document.querySelectorAll('input[name="web-log-domain"]:checked').forEach(cb => cb.checked = false);
+    }
+
+    async function loadWebBlocklist() {
+        const res = await fetch('/api/web-blocklist');
+        const data = await res.json();
+        webBlocklistItems.innerHTML = '';
+        if (data && data.length > 0) {
+            data.forEach(domain => {
+                webBlocklistItems.innerHTML += `<div>${domain} <button onclick="removeWebBlocklist('${domain}')">X</button></div>`;
+            });
+        } else {
+            webBlocklistItems.innerHTML = 'Hiện không có trang web nào bị chặn.';
+        }
+    }
+
+    async function removeWebBlocklist(domain) {
+      if (confirm(`Bạn có chắc chắn muốn bỏ chặn ${domain} không?`)) {
+        await fetch('/api/web-blocklist/remove', { 
+          method: 'POST', 
+          headers: {'Content-Type': 'application/json'}, 
+          body: JSON.stringify({ domain: domain })
+        });
+        loadWebBlocklist();
+      }
     }
 
     function checkExtension() {
@@ -270,8 +382,6 @@
         loadBlocklist(); // Refresh the list
     }
 
-
-
     async function uninstall() {
         uninstallModal.style.display = 'block';
     }
@@ -302,9 +412,9 @@
         }
     });
 
-    // Set defaults and show search view by default
+    // Set defaults and show the welcome view by default
     setDefaults();
-    showView('search-view');
+    showTopLevelView('welcome-view');
     checkExtension();
   </script>
 </body>
