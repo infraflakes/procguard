@@ -76,6 +76,9 @@ func (s *Server) registerRoutes(r *http.ServeMux) {
 	r.HandleFunc("/api/web-blocklist", s.handleGetWebBlocklist)
 	r.HandleFunc("/api/web-blocklist/add", s.handleAddWebBlocklist)
 	r.HandleFunc("/api/web-blocklist/remove", s.handleRemoveWebBlocklist)
+	r.HandleFunc("/api/web-blocklist/clear", s.handleClearWebBlocklist)
+	r.HandleFunc("/api/web-blocklist/save", s.handleSaveWebBlocklist)
+	r.HandleFunc("/api/web-blocklist/load", s.handleLoadWebBlocklist)
 
 	// Web Log API routes
 	r.HandleFunc("/api/web-logs", s.handleGetWebLogs)

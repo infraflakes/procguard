@@ -87,6 +87,14 @@
     </div>
     <div id="web-blocklist-view" style="display:none;">
       <h2>Quản lý Danh sách chặn Web</h2>
+      <div id="web-blocklist-controls">
+          <button onclick="unblockSelectedWebsites()">Bỏ chặn mục đã chọn</button>
+          <button onclick="clearWebBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
+          <button onclick="saveWebBlocklist()">Lưu danh sách chặn</button>
+          <button onclick="document.getElementById('load-web-input').click()">Tải lên danh sách chặn</button>
+          <input type="file" id="load-web-input" style="display: none;" onchange="loadWebBlocklistFile(event)">
+          <span id="unblock-web-status" class="status-message"></span>
+      </div>
       <div id="web-blocklist-items"></div>
     </div>
   </div>
@@ -231,7 +239,7 @@
         webBlocklistItems.innerHTML = '';
         if (data && data.length > 0) {
             data.forEach(domain => {
-                webBlocklistItems.innerHTML += `<div>${domain} <button onclick="removeWebBlocklist('${domain}')">X</button></div>`;
+                webBlocklistItems.innerHTML += `<div><input type="checkbox" name="blocked-website" value="${domain}"> ${domain} <button onclick="removeWebBlocklist('${domain}')">X</button></div>`;
             });
         } else {
             webBlocklistItems.innerHTML = 'Hiện không có trang web nào bị chặn.';
@@ -247,6 +255,64 @@
         });
         loadWebBlocklist();
       }
+    }
+
+    async function unblockSelectedWebsites() {
+        const selectedWebsites = Array.from(document.querySelectorAll('input[name="blocked-website"]:checked')).map(cb => cb.value);
+        if (selectedWebsites.length === 0) {
+            alert("Vui lòng chọn các trang web để bỏ chặn.");
+            return;
+        }
+        for (const domain of selectedWebsites) {
+            await fetch('/api/web-blocklist/remove', { 
+              method: 'POST', 
+              headers: {'Content-Type': 'application/json'}, 
+              body: JSON.stringify({ domain: domain })
+            });
+        }
+        document.getElementById('unblock-web-status').innerText = 'Đã bỏ chặn: ' + selectedWebsites.join(', ');
+        setTimeout(() => { document.getElementById('unblock-web-status').innerText = ''; }, 3000);
+        loadWebBlocklist(); // Refresh the list
+    }
+
+    async function clearWebBlocklist() {
+        if (confirm("Bạn có chắc chắn muốn xóa toàn bộ danh sách chặn web không?")) {
+            await fetch('/api/web-blocklist/clear', { method: 'POST' });
+            document.getElementById('unblock-web-status').innerText = 'Đã xóa toàn bộ danh sách chặn web.';
+            setTimeout(() => { document.getElementById('unblock-web-status').innerText = ''; }, 3000);
+            loadWebBlocklist(); // Refresh the list
+        }
+    }
+
+    async function saveWebBlocklist() {
+        const response = await fetch('/api/web-blocklist/save');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'procguard_web_blocklist.json';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    async function loadWebBlocklistFile(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+
+        await fetch('/api/web-blocklist/load', {
+            method: 'POST',
+            body: formData
+        });
+
+        document.getElementById('unblock-web-status').innerText = 'Đã tải lên và hợp nhất danh sách chặn web.';
+        setTimeout(() => { document.getElementById('unblock-web-status').innerText = ''; }, 3000);
+        loadWebBlocklist(); // Refresh the list
     }
 
     function checkExtension() {
