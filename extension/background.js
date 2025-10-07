@@ -52,13 +52,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  const blockedPage = chrome.runtime.getURL('blocked.html');
+  if (tab.url === blockedPage) {
+    return;
+  }
+
   // Check if the site is in the blocklist.
   if (tab.url) {
     try {
       const url = new URL(tab.url);
       const domain = url.hostname;
       if (webBlocklist.includes(domain)) {
-        chrome.tabs.update(tabId, { url: chrome.runtime.getURL('blocked.html') });
+        chrome.tabs.update(tabId, { url: blockedPage });
         return;
       }
     } catch (e) {

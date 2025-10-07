@@ -45,25 +45,6 @@ var DefaultLinux = []string{
 	"wireplumber",
 	"speech-dispatcher",
 
-	// Other user-level services
-	"fcitx5-",
-	"music-discord-rpc",
-
-	// Browser/Electron helpers
-	"Web Content",
-	"Isolated Web Co",
-	"Socket Process",
-	"Privileged Cont",
-	"RDD Process",
-	"WebExtensions",
-	"Utility Process",
-	"crashhelper",
-	"forkserver",
-	"MainThread",
-	".zen-twilight-w",
-	".ghostty-wrappe",
-	".wl-copy-wrappe",
-
 	// Other
 	"Xwayland",
 	"ssh-agent",

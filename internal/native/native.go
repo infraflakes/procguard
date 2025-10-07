@@ -7,6 +7,8 @@ import (
 	"os"
 	"procguard/internal/blocklist/webblocklist"
 	"procguard/internal/logger"
+	"reflect"
+	"time"
 )
 
 // Request is the message received from the extension.
@@ -25,6 +27,8 @@ type Response struct {
 func Run() {
 	log := logger.GetWebLogger()
 	log.Println("Native messaging host started")
+
+	go pollWebBlocklist()
 
 	for {
 		var length uint32
@@ -79,6 +83,31 @@ func Run() {
 			}
 		default:
 			// Optionally handle unknown message types
+		}
+	}
+}
+
+func pollWebBlocklist() {
+	log := logger.GetWebLogger()
+	var lastBlocklist []string
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		list, err := webblocklist.Load()
+		if err != nil {
+			log.Printf("Error loading web blocklist for polling: %v", err)
+			continue
+		}
+
+		if !reflect.DeepEqual(list, lastBlocklist) {
+			log.Println("Web blocklist has changed, sending update to extension.")
+			lastBlocklist = list
+			resp := Response{
+				Type:    "web_blocklist",
+				Payload: list,
+			}
+			sendMessage(resp)
 		}
 	}
 }
