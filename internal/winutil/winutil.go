@@ -12,10 +12,10 @@ import (
 const (
 	// Integrity Level constants
 	SECURITY_MANDATORY_UNTRUSTED_RID         = 0x00000000
-	SECURITY_MANDATORY_LOW_RID             = 0x00001000
-	SECURITY_MANDATORY_MEDIUM_RID          = 0x00002000
-	SECURITY_MANDATORY_HIGH_RID            = 0x00003000
-	SECURITY_MANDATORY_SYSTEM_RID          = 0x00004000
+	SECURITY_MANDATORY_LOW_RID               = 0x00001000
+	SECURITY_MANDATORY_MEDIUM_RID            = 0x00002000
+	SECURITY_MANDATORY_HIGH_RID              = 0x00003000
+	SECURITY_MANDATORY_SYSTEM_RID            = 0x00004000
 	SECURITY_MANDATORY_PROTECTED_PROCESS_RID = 0x00005000
 )
 
@@ -52,7 +52,7 @@ func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
 	// A SID is structured as: [Revision][SubAuthorityCount][Authority][SubAuthority1]...[SubAuthorityN]
 	// We need to get the address of the last SubAuthority.
 	subAuthorityCount := *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(sid)) + 1))
-	pSubAuthority := uintptr(unsafe.Pointer(sid)) + 8 + (uintptr(subAuthorityCount) - 1) * 4
+	pSubAuthority := uintptr(unsafe.Pointer(sid)) + 8 + (uintptr(subAuthorityCount)-1)*4
 
 	return *(*uint32)(unsafe.Pointer(pSubAuthority)), nil
 }

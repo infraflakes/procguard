@@ -9,9 +9,12 @@ import (
 	"path/filepath"
 	"procguard/internal/blocklist"
 	"strings"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 const taskName = "ProcGuardDaemon"
+const hostName = "com.nixuris.procguard"
 
 func platformUninstall() error {
 	// Unblock all files
@@ -24,6 +27,11 @@ func platformUninstall() error {
 		fmt.Fprintf(os.Stderr, "Warning: could not remove task scheduler entry: %v\n", err)
 	}
 
+	// Remove Native Messaging Host configuration
+	if err := removeNativeHost(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not remove native messaging host configuration: %v\n", err)
+	}
+
 	// Remove data files
 	if err := removeDataFiles(); err != nil {
 		return err
@@ -31,6 +39,28 @@ func platformUninstall() error {
 
 	// Remove backup executable
 	return removeBackup()
+}
+
+func removeNativeHost() error {
+	fmt.Println("Removing Native Messaging Host configuration...")
+
+	// Delete the registry key.
+	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + hostName
+	if err := registry.DeleteKey(registry.CURRENT_USER, keyPath); err != nil && err != registry.ErrNotExist {
+		return err
+	}
+
+	// Delete the manifest file.
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return err
+	}
+	manifestPath := filepath.Join(cacheDir, "procguard", "procguard.json")
+	if err := os.Remove(manifestPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
 }
 
 func unblockAll() error {
@@ -81,5 +111,3 @@ func removeBackup() error {
 	}
 	return os.RemoveAll(filepath.Join(localAppData, "ProcGuard"))
 }
-
-

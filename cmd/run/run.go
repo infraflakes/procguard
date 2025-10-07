@@ -36,5 +36,5 @@ var daemonCmd = &cobra.Command{
 }
 
 func init() {
-	RunCmd.AddCommand(apiCmd, daemonCmd)
+	RunCmd.AddCommand(apiCmd, daemonCmd, nativeHostCmd)
 }

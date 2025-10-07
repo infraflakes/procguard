@@ -52,6 +52,7 @@ clean:
 	rm -f $(BINARY_LINUX_NAME)
 	rm -f $(BINARY_WINDOWS_NAME)
 	rm -rf $(NIX_BUILD)
+	rm -rf rsrc.syso
 
 install:
 	@echo "Installing $(BINARY_NAME) to $(shell $(GO_CMD) env GOPATH)/bin..."

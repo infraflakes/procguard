@@ -14,6 +14,12 @@ import (
 
 // HandleDefaultStartup implements the main startup logic for GUI mode on Windows.
 func HandleDefaultStartup() {
+	// Set up the native messaging host if it's not already installed.
+	if err := installNativeHost(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to install native messaging host: %v\n", err)
+		// We don't want to block the main application from starting if this fails.
+	}
+
 	const defaultPort = "58141"
 	guiAddress := "127.0.0.1:" + defaultPort
 	guiUrl := "http://" + guiAddress
@@ -22,7 +28,7 @@ func HandleDefaultStartup() {
 	_, err := http.Get(guiUrl + "/ping")
 	if err == nil {
 		// Instance is already running. Just open the browser and exit.
-	openBrowser(guiUrl)
+		openBrowser(guiUrl)
 		return
 	}
 
@@ -31,7 +37,7 @@ func HandleDefaultStartup() {
 
 	// Set up autostart for Windows if applicable.
 
-daemon.EnsureAutostartTask()
+	daemon.EnsureAutostartTask()
 
 	// Start the API and daemon services in the background.
 	exePath, err := os.Executable()

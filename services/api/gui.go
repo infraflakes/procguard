@@ -1,8 +1,8 @@
 package api
 
 import (
-	"fmt"
 	_ "embed"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
