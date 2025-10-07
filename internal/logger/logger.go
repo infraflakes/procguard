@@ -52,5 +52,5 @@ func createLogger(logSubDir string) *log.Logger {
 		Compress:   true,
 	}
 
-	return log.New(lumberjackLogger, "", log.LstdFlags)
+	return log.New(lumberjackLogger, "", 0)
 }
