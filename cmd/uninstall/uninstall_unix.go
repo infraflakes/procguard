@@ -79,30 +79,24 @@ func removeSystemdService() error {
 }
 
 func removeDataAndBackup() error {
-	fmt.Println("Removing data and backup files...")
+	fmt.Println("Removing all application data and backups...")
 
 	// Remove data from cache
 	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		return err
-	}
-	procguardDir := filepath.Join(cacheDir, "procguard")
-	logsDir := filepath.Join(procguardDir, "logs")
-
-	if err := os.RemoveAll(logsDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not remove logs directory: %v\n", err)
-	}
-	if err := os.RemoveAll(procguardDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not remove cache directory: %v\n", err)
+	if err == nil {
+		procguardCacheDir := filepath.Join(cacheDir, "procguard")
+		if err := os.RemoveAll(procguardCacheDir); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not remove cache directory: %v\n", err)
+		}
 	}
 
 	// Remove backup from local share
 	dataDir, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	if err := os.RemoveAll(filepath.Join(dataDir, ".local", "share", "procguard")); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not remove backup directory: %v\n", err)
+	if err == nil {
+		procguardDataDir := filepath.Join(dataDir, ".local", "share", "procguard")
+		if err := os.RemoveAll(procguardDataDir); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not remove backup directory: %v\n", err)
+		}
 	}
 
 	return nil

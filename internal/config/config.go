@@ -28,7 +28,7 @@ func GetConfigPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(cacheDir, "procguard", "spec.json"), nil
+	return filepath.Join(cacheDir, "procguard", "config", "settings.json"), nil
 }
 
 // Load reads the configuration file from the user's cache directory.

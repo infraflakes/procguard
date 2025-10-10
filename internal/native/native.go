@@ -1,13 +1,16 @@
 package native
 
 import (
+	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"io"
 	"os"
 	"procguard/internal/blocklist/webblocklist"
+	"procguard/internal/database"
 	"procguard/internal/logger"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -25,8 +28,14 @@ type Response struct {
 
 // Run starts the native messaging host.
 func Run() {
-	log := logger.GetWebLogger()
+	log := logger.Get()
 	log.Println("Native messaging host started")
+
+	db, err := database.OpenDB()
+	if err != nil {
+		log.Fatalf("Native host failed to open database: %v", err)
+	}
+	defer db.Close()
 
 	go pollWebBlocklist()
 
@@ -53,7 +62,7 @@ func Run() {
 			continue
 		}
 
-		log.Printf("Received message: Type=%s, Payload=%s", req.Type, req.Payload)
+		log.Printf("Received message: Type=%s", req.Type)
 
 		// Handle the message based on its type.
 		switch req.Type {
@@ -65,7 +74,11 @@ func Run() {
 			}
 			sendMessage(resp)
 		case "log_url":
-			log.Printf("URL: %s", req.Payload)
+			// Ignore logging the app's own GUI
+			if strings.HasPrefix(req.Payload, "http://127.0.0.1:58141") {
+				continue
+			}
+			writeUrlToDatabase(db, req.Payload)
 		case "get_web_blocklist":
 			list, err := webblocklist.Load()
 			if err != nil {
@@ -87,8 +100,15 @@ func Run() {
 	}
 }
 
+func writeUrlToDatabase(db *sql.DB, url string) {
+	_, err := db.Exec("INSERT INTO web_events (url, timestamp) VALUES (?, ?)", url, time.Now().Unix())
+	if err != nil {
+		logger.Get().Printf("Failed to insert web event: %v", err)
+	}
+}
+
 func pollWebBlocklist() {
-	log := logger.GetWebLogger()
+	log := logger.Get()
 	var lastBlocklist []string
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -113,7 +133,7 @@ func pollWebBlocklist() {
 }
 
 func sendMessage(resp Response) {
-	log := logger.GetWebLogger()
+	log := logger.Get()
 	b, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Error marshalling response: %v", err)

@@ -62,6 +62,14 @@ func createSchema(db *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_app_events_start_time ON app_events (start_time);
 	CREATE INDEX IF NOT EXISTS idx_app_events_end_time ON app_events (end_time);
 	CREATE INDEX IF NOT EXISTS idx_app_events_pid ON app_events (pid);
+
+	CREATE TABLE IF NOT EXISTS web_events (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		url TEXT NOT NULL,
+		timestamp INTEGER NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_web_events_timestamp ON web_events (timestamp);
 	`
 	_, err := db.Exec(schema)
 	return err

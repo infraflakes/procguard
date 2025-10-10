@@ -17,9 +17,10 @@ const appName = "ProcGuard"
 const hostName = "com.nixuris.procguard"
 
 func platformUninstall() error {
-	// Unblock all files
+	// Unblock all files first
 	if err := unblockAll(); err != nil {
-		return err
+		// Log a warning but continue, as the user might want to clean up the rest of the installation.
+		fmt.Fprintf(os.Stderr, "Warning: could not unblock all files: %v\n", err)
 	}
 
 	// Remove autostart registry entry
@@ -32,13 +33,15 @@ func platformUninstall() error {
 		fmt.Fprintf(os.Stderr, "Warning: could not remove native messaging host configuration: %v\n", err)
 	}
 
-	// Remove data files
-	if err := removeDataFiles(); err != nil {
-		return err
+	// Remove all application data, logs, and backups from LOCALAPPDATA
+	fmt.Println("Removing all application data...")
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData == "" {
+		return fmt.Errorf("could not find LOCALAPPDATA directory")
 	}
+	appDataDir := filepath.Join(localAppData, appName)
 
-	// Remove backup executable
-	return removeBackup()
+	return os.RemoveAll(appDataDir)
 }
 
 
@@ -84,26 +87,4 @@ func unblockAll() error {
 	return nil
 }
 
-func removeDataFiles() error {
-	fmt.Println("Removing data files...")
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		return err
-	}
-	procguardDir := filepath.Join(cacheDir, "procguard")
-	logsDir := filepath.Join(procguardDir, "logs")
 
-	if err := os.RemoveAll(logsDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not remove logs directory: %v\n", err)
-	}
-	return os.RemoveAll(procguardDir)
-}
-
-func removeBackup() error {
-	fmt.Println("Removing backup executable...")
-	localAppData := os.Getenv("LOCALAPPDATA")
-	if localAppData == "" {
-		return fmt.Errorf("could not find LOCALAPPDATA directory")
-	}
-	return os.RemoveAll(filepath.Join(localAppData, "ProcGuard"))
-}

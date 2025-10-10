@@ -83,6 +83,16 @@
       <div id="web-log-controls">
         <button onclick="blockSelectedWebsites()">Chặn mục đã chọn</button>
       </div>
+      <div id="web-time-filter-container">
+          <span>Lọc theo thời gian:</span>
+          <button onclick="searchWebLogs({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
+          <button onclick="searchWebLogs({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
+          <button onclick="searchWebLogs({since: '7 days ago', until: 'now'})">7 ngày qua</button>
+          <br>
+          <span>Từ: </span><input type="date" id="web_since_date"> <input type="time" id="web_since_time" step="60">
+          <span>Đến: </span><input type="date" id="web_until_date"> <input type="time" id="web_until_time" step="60">
+          <button onclick="searchWebLogs()">Xác nhận</button>
+      </div>
       <div id="web-log-items"></div>
     </div>
     <div id="web-blocklist-view" style="display:none;">
@@ -133,6 +143,10 @@
     const sinceTimeInput = document.getElementById('since_time');
     const untilDateInput = document.getElementById('until_date');
     const untilTimeInput = document.getElementById('until_time');
+    const webSinceDateInput = document.getElementById('web_since_date');
+    const webSinceTimeInput = document.getElementById('web_since_time');
+    const webUntilDateInput = document.getElementById('web_until_date');
+    const webUntilTimeInput = document.getElementById('web_until_time');
     const blocklistItems = document.getElementById('blocklist-items');
     const uninstallModal = document.getElementById('uninstall-modal');
     const uninstallForm = document.getElementById('uninstall-form');
@@ -163,6 +177,8 @@
         const today = `${year}-${month}-${day}`;
         sinceDateInput.value = today;
         untilDateInput.value = today;
+        webSinceDateInput.value = today;
+        webUntilDateInput.value = today;
     }
 
     async function loadAutostartStatus() {
@@ -240,13 +256,44 @@
       }
     }
 
-    async function loadWebLogs() {
-        const res = await fetch('/api/web-logs');
+    async function searchWebLogs(range) {
+        let since = '';
+        let until = '';
+
+        if (range) {
+            since = range.since;
+            until = range.until;
+        } else {
+            if (webSinceDateInput.value && webSinceTimeInput.value) {
+                since = `${webSinceDateInput.value}T${webSinceTimeInput.value}`;
+            }
+            if (webUntilDateInput.value && webUntilTimeInput.value) {
+                until = `${webUntilDateInput.value}T${webUntilTimeInput.value}`;
+            }
+        }
+        await loadWebLogs(since, until);
+    }
+
+    async function loadWebLogs(since = '', until = '') {
+        let url = '/api/web-logs';
+        const params = new URLSearchParams();
+        if (since) {
+            params.append('since', since);
+        }
+        if (until) {
+            params.append('until', until);
+        }
+        const queryString = params.toString();
+        if (queryString) {
+            url += `?${queryString}`;
+        }
+
+        const res = await fetch(url);
         const data = await res.json();
         webLogItems.innerHTML = '';
         if (data && data.length > 0) {
-            // Reverse the array to show newest logs first
-            webLogItems.innerHTML = data.reverse().map(l => {
+            // Data is already sorted by timestamp descending from the server
+            webLogItems.innerHTML = data.map(l => {
                 const urlString = l[1];
                 let domain = '';
                 try {

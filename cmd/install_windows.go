@@ -1,3 +1,5 @@
+//go:build windows
+
 package cmd
 
 import (
@@ -43,13 +45,14 @@ func installNativeHost(exePath string) error {
 		return fmt.Errorf("failed to get user cache dir: %w", err)
 	}
 	appDataDir := filepath.Join(cacheDir, "procguard")
-	if err := os.MkdirAll(appDataDir, 0755); err != nil {
-		log.Printf("Failed to create app data directory: %v", err)
-		return fmt.Errorf("failed to create app data directory: %w", err)
+	configDir := filepath.Join(appDataDir, "config")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		log.Printf("Failed to create config directory: %v", err)
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	// Create the manifest file in the app data directory.
-	manifestPath := filepath.Join(appDataDir, "procguard.json")
+	// Create the manifest file in the config directory.
+	manifestPath := filepath.Join(configDir, "native-host.json")
 	if err := createManifest(manifestPath, exePath, extensionId); err != nil {
 		log.Printf("Failed to create manifest file: %v", err)
 		return fmt.Errorf("failed to create manifest file: %w", err)
