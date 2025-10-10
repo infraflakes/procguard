@@ -6,11 +6,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"procguard/internal/database"
-	"procguard/internal/ignore"
 	"procguard/internal/logger"
-	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -130,59 +127,7 @@ func initializeRunningProcs(runningProcs map[int32]bool, db *sql.DB) {
 	}
 }
 
-// shouldLogProcess determines if a process should be logged based on platform-specific rules
-// and the user's request to not log child processes.
-func shouldLogProcess(p *process.Process) bool {
-	name, err := p.Name()
-	if err != nil || name == "" {
-		return false // Skip processes with no name
-	}
 
-	// Universal check: ignore self
-	if p.Pid == int32(os.Getpid()) {
-		return false
-	}
-
-	parent, err := p.Parent()
-	if err != nil {
-		return false // Skip processes with no parent
-	}
-	parentName, _ := parent.Name()
-
-	var ignoreList []string
-	if runtime.GOOS == "windows" {
-		ignoreList = ignore.DefaultWindows
-		// On Windows, a good heuristic for a "user-initiated" app is one parented by explorer.exe
-		// or one with no parent that isn't a system process.
-		if parentName == "explorer.exe" {
-			return !ignore.IsIgnored(name, ignoreList)
-		}
-	} else {
-		ignoreList = ignore.DefaultLinux
-	}
-
-	// The user wants to avoid logging child processes.
-	// A good heuristic is to only log processes whose parent is a system/session manager process (and is in the ignore list),
-	// or to explicitly ignore processes whose parents are known shells or other apps.
-	// The current ignore list is for filtering out system processes, so if the parent is in the list, the child is likely a user app.
-	// Let's refine the logic: don't log a process if its direct parent is NOT a system-level service.
-	// This is tricky. A simpler, more robust rule is to just filter out the noise, which the ignore list does.
-	// If a process name or its parent's name is in the ignore list, we skip it.
-	if ignore.IsIgnored(name, ignoreList) || ignore.IsIgnored(parentName, ignoreList) {
-		return false
-	}
-
-	// Platform-specific checks
-	if runtime.GOOS == "linux" {
-		uids, err := p.Uids()
-		if err != nil || len(uids) == 0 || uids[0] < 1000 {
-			return false // Skip system users
-		}
-	}
-	// Add other platform-specific checks if needed
-
-	return true
-}
 
 func runProcessKiller(appLogger *log.Logger) {
 	killTick := time.NewTicker(100 * time.Millisecond)
