@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"procguard/cmd/daemon"
 	"procguard/internal/blocklist"
 	"strings"
 
@@ -22,7 +23,7 @@ func platformUninstall() error {
 	}
 
 	// Remove autostart registry entry
-	if err := removeAutostartEntry(); err != nil {
+	if err := daemon.RemoveAutostart(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not remove autostart registry entry: %v\n", err)
 	}
 
@@ -40,24 +41,7 @@ func platformUninstall() error {
 	return removeBackup()
 }
 
-func removeAutostartEntry() error {
-	fmt.Println("Removing autostart registry entry...")
-	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
-	if err != nil {
-		if err == registry.ErrNotExist {
-			return nil // Key doesn't exist, nothing to do.
-		}
-		return err
-	}
-	defer key.Close()
 
-	// Delete the value. If it doesn't exist, this will return an error that we can ignore.
-	if err := key.DeleteValue(appName); err != nil && err != registry.ErrNotExist {
-		return err
-	}
-
-	return nil
-}
 
 func removeNativeHost() error {
 	fmt.Println("Removing Native Messaging Host configuration...")

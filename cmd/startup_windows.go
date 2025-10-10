@@ -7,22 +7,22 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"procguard/cmd/daemon"
 	"syscall"
 	"time"
 )
 
 // HandleDefaultStartup implements the main startup logic for GUI mode on Windows.
 func HandleDefaultStartup() {
-	// Set up autostart and get the path to the persistent executable.
-	persistentExePath, err := daemon.EnsureAutostart()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to set up autostart: %v\n", err)
-		// Continue execution even if autostart fails.
-	}
+	// The autostart logic has been moved to a user-initiated action in the GUI.
 
-	// Set up the native messaging host using the persistent path.
-	if err := installNativeHost(persistentExePath); err != nil {
+	// Set up the native messaging host using the current executable's path.
+	// Note: This means the original executable must be kept.
+	// This will be improved when a proper installer is built.
+	exePath, err := os.Executable()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error getting executable path:", err)
+	}
+	if err := installNativeHost(exePath); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to install native messaging host: %v\n", err)
 		// We don't want to block the main application from starting if this fails.
 	}
@@ -43,12 +43,6 @@ func HandleDefaultStartup() {
 	fmt.Println("Starting ProcGuard services...")
 
 	// Start the API and daemon services in the background.
-	exePath, err := os.Executable()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error getting executable path:", err)
-		return
-	}
-
 	cmdApi := exec.Command(exePath, "run", "api")
 	cmdApi.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW
 	if err := cmdApi.Start(); err != nil {

@@ -56,6 +56,37 @@ func EnsureAutostart() (string, error) {
 	return destPath, nil
 }
 
+// RemoveAutostart removes the registry entry that starts the application on logon.
+func RemoveAutostart() error {
+	fmt.Println("Removing autostart registry entry...")
+	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+	if err != nil {
+		if err == registry.ErrNotExist {
+			return nil // Key doesn't exist, nothing to do.
+		}
+		return err
+	}
+	defer key.Close()
+
+	// Delete the value. If it doesn't exist, this will return an error that we can ignore.
+	if err := key.DeleteValue(appName); err != nil && err != registry.ErrNotExist {
+		return err
+	}
+
+	// Update the config file to reflect the change
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
+	} else {
+		cfg.AutostartEnabled = false
+		if err := cfg.Save(); err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to save config to update autostart status:", err)
+		}
+	}
+
+	return nil
+}
+
 // copyExecutableToAppData copies the current executable to a hidden, persistent location in LOCALAPPDATA.
 // It returns the path to the new executable.
 func copyExecutableToAppData() (string, error) {

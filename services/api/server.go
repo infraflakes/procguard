@@ -97,4 +97,9 @@ func (s *Server) registerRoutes(r *http.ServeMux) {
 
 	// Web Log API routes
 	r.HandleFunc("/api/web-logs", s.handleGetWebLogs)
+
+	// Settings API routes
+	r.HandleFunc("/api/settings/autostart/status", s.handleGetAutostartStatus)
+	r.HandleFunc("/api/settings/autostart/enable", s.handleEnableAutostart)
+	r.HandleFunc("/api/settings/autostart/disable", s.handleDisableAutostart)
 }

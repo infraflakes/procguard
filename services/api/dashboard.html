@@ -102,6 +102,12 @@
   <div id="settings-view" style="display:none;">
     <h2>Cài đặt</h2>
     <div id="settings-controls">
+        <div id="autostart-settings">
+            <h4>Khởi động cùng Windows</h4>
+            <p>Trạng thái: <b id="autostart-status">Không rõ</b></p>
+            <button id="autostart-toggle-btn" onclick="toggleAutostart()">Toggle</button>
+        </div>
+        <hr>
         <button onclick="uninstall()" style="background-color: #d9534f;">Gỡ cài đặt ProcGuard</button>
         <p><b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt ProcGuard khỏi hệ thống.</p>
     </div>
@@ -138,6 +144,10 @@
     const installExtensionBtn = document.getElementById('install-extension-btn');
     const webBlocklistItems = document.getElementById('web-blocklist-items');
     const webLogItems = document.getElementById('web-log-items');
+    const autostartStatusEl = document.getElementById('autostart-status');
+    const autostartToggleBtn = document.getElementById('autostart-toggle-btn');
+
+    let isAutostartEnabled = false;
 
     const EXTENSION_ID = 'ilaocldmkhlifnikhinkmiepekpbefoh';
 
@@ -155,6 +165,43 @@
         untilDateInput.value = today;
     }
 
+    async function loadAutostartStatus() {
+        try {
+            const res = await fetch('/api/settings/autostart/status');
+            if (!res.ok) {
+                autostartStatusEl.textContent = "Không hỗ trợ trên HĐH này";
+                autostartToggleBtn.disabled = true;
+                return;
+            }
+            const data = await res.json();
+            isAutostartEnabled = data.enabled;
+            autostartStatusEl.textContent = isAutostartEnabled ? "Đã bật" : "Đã tắt";
+            autostartToggleBtn.textContent = isAutostartEnabled ? "Tắt tự động khởi động" : "Bật tự động khởi động";
+            autostartToggleBtn.disabled = false;
+        } catch (e) {
+            autostartStatusEl.textContent = "Lỗi khi tải trạng thái";
+            autostartToggleBtn.disabled = true;
+        }
+    }
+
+    async function toggleAutostart() {
+        const endpoint = isAutostartEnabled ? '/api/settings/autostart/disable' : '/api/settings/autostart/enable';
+        try {
+            autostartToggleBtn.disabled = true;
+            const res = await fetch(endpoint, { method: 'POST' });
+            if (!res.ok) {
+                const errorText = await res.text();
+                alert(`Thao tác thất bại: ${errorText}`);
+            } else {
+                await loadAutostartStatus(); // Refresh status after action
+            }
+        } catch (e) {
+            alert(`Đã xảy ra lỗi: ${e.message}`);
+        } finally {
+            autostartToggleBtn.disabled = false;
+        }
+    }
+
     function showTopLevelView(viewName) {
         topLevelViews.forEach(id => {
             document.getElementById(id).style.display = 'none';
@@ -166,6 +213,8 @@
           showSubView('search-view', 'app-management-view');
         } else if (viewName === 'web-management-view') {
           showSubView('web-log-view', 'web-management-view');
+        } else if (viewName === 'settings-view') {
+          loadAutostartStatus();
         }
     }
 
