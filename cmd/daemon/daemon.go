@@ -1,4 +1,3 @@
-
 package daemon
 
 import (
@@ -125,8 +124,6 @@ func initializeRunningProcs(runningProcs map[int32]bool, db *sql.DB) {
 		}
 	}
 }
-
-
 
 func runProcessKiller(appLogger *log.Logger) {
 	killTick := time.NewTicker(100 * time.Millisecond)

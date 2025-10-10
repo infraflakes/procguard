@@ -37,7 +37,7 @@ func HandleDefaultStartup() {
 
 	// Set up autostart for Windows if applicable.
 
-	daemon.EnsureAutostartTask()
+	daemon.EnsureAutostart()
 
 	// Start the API and daemon services in the background.
 	exePath, err := os.Executable()

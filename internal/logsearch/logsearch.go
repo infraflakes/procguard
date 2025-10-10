@@ -1,4 +1,3 @@
-
 package logsearch
 
 import (
@@ -69,7 +68,7 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 		}
 
 		startTimeStr := time.Unix(startTime.Int64, 0).Format("2006-01-02 15:04:05")
-		
+
 		// Format the results into the structure the frontend expects
 		// [Time, ProcessName, PID, ParentName]
 		results = append(results, []string{

@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-
 func (s *Server) apiSearch(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))
 	sinceStr := r.URL.Query().Get("since")

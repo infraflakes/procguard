@@ -5,7 +5,6 @@ package uninstall
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"procguard/internal/blocklist"
 	"strings"
@@ -13,7 +12,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-const taskName = "ProcGuardDaemon"
+const appName = "ProcGuard"
 const hostName = "com.nixuris.procguard"
 
 func platformUninstall() error {
@@ -22,9 +21,9 @@ func platformUninstall() error {
 		return err
 	}
 
-	// Remove Task Scheduler task
-	if err := removeTask(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not remove task scheduler entry: %v\n", err)
+	// Remove autostart registry entry
+	if err := removeAutostartEntry(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not remove autostart registry entry: %v\n", err)
 	}
 
 	// Remove Native Messaging Host configuration
@@ -39,6 +38,25 @@ func platformUninstall() error {
 
 	// Remove backup executable
 	return removeBackup()
+}
+
+func removeAutostartEntry() error {
+	fmt.Println("Removing autostart registry entry...")
+	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+	if err != nil {
+		if err == registry.ErrNotExist {
+			return nil // Key doesn't exist, nothing to do.
+		}
+		return err
+	}
+	defer key.Close()
+
+	// Delete the value. If it doesn't exist, this will return an error that we can ignore.
+	if err := key.DeleteValue(appName); err != nil && err != registry.ErrNotExist {
+		return err
+	}
+
+	return nil
 }
 
 func removeNativeHost() error {
@@ -80,12 +98,6 @@ func unblockAll() error {
 	}
 
 	return nil
-}
-
-func removeTask() error {
-	fmt.Println("Removing Task Scheduler task...")
-	// The /f flag is to force the deletion.
-	return exec.Command("schtasks", "/delete", "/tn", taskName, "/f").Run()
 }
 
 func removeDataFiles() error {

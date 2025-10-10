@@ -6,83 +6,87 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"procguard/internal/config"
+
+	"golang.org/x/sys/windows/registry"
 )
 
-const taskName = "ProcGuardDaemon"
+const appName = "ProcGuard"
 
-// EnsureAutostartTask checks if the autostart task exists and creates it if it doesn't.
-// On creation, it copies the executable to a persistent location and points the task there.
-func EnsureAutostartTask() {
-	// Check if the task already exists.
-	err := exec.Command("schtasks", "/query", "/tn", taskName).Run()
-	if err == nil {
-		return // Task already exists, do nothing.
+// EnsureAutostart creates a registry entry in the current user's Run key to start the application on logon.
+func EnsureAutostart() {
+	// The path to the executable in the persistent location
+	destPath, err := copyExecutableToAppData()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to set up persistent executable:", err)
+		return
+	}
+
+	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.QUERY_VALUE|registry.SET_VALUE)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to open Run registry key:", err)
+		return
+	}
+	defer key.Close()
+
+	// Check if the value already exists and is correct.
+	currentPath, _, err := key.GetStringValue(appName)
+	if err == nil && currentPath == destPath {
+		return // Entry already exists and is correct.
 	}
 
 	fmt.Println("Performing first-time setup for ProcGuard persistence...")
 
-	// 1. Get path of the currently running executable (the source).
+	// Set the registry value to point to the persistent executable path.
+	if err := key.SetStringValue(appName, destPath); err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to set startup registry key:", err)
+		return
+	}
+
+	fmt.Println("Successfully created startup registry entry.")
+}
+
+// copyExecutableToAppData copies the current executable to a hidden, persistent location in LOCALAPPDATA.
+// It returns the path to the new executable.
+func copyExecutableToAppData() (string, error) {
 	sourcePath, err := os.Executable()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error getting executable path:", err)
-		return
+		return "", fmt.Errorf("error getting executable path: %w", err)
 	}
 
-	// 2. Define the hidden backup location (the destination).
 	localAppData := os.Getenv("LOCALAPPDATA")
 	if localAppData == "" {
-		fmt.Fprintln(os.Stderr, "Could not find LOCALAPPDATA directory.")
-		return
+		return "", fmt.Errorf("could not find LOCALAPPDATA directory")
 	}
-	destDir := filepath.Join(localAppData, "ProcGuard")
+	destDir := filepath.Join(localAppData, appName)
 	destPath := filepath.Join(destDir, "ProcGuardSvc.exe")
 
-	// 3. Copy the executable to the backup location.
+	// If the file already exists, no need to copy again.
+	if _, err := os.Stat(destPath); err == nil {
+		return destPath, nil
+	}
+
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating destination directory:", err)
-		return
+		return "", fmt.Errorf("error creating destination directory: %w", err)
 	}
 
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error opening source executable:", err)
-		return
+		return "", fmt.Errorf("error opening source executable: %w", err)
 	}
 	defer sourceFile.Close()
 
 	destFile, err := os.Create(destPath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating destination executable:", err)
-		return
+		return "", fmt.Errorf("error creating destination executable: %w", err)
 	}
 	defer destFile.Close()
 
 	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error copying executable:", err)
-		return
+		return "", fmt.Errorf("error copying executable: %w", err)
 	}
 
 	fmt.Println("Executable backed up to", destPath)
-
-	// 4. Create the scheduled task pointing to the NEW backup location.
-	fmt.Println("Creating autostart task...")
-	cmd := exec.Command("schtasks", "/create", "/tn", taskName, "/tr", `"`+destPath+`"`, "/sc", "ONLOGON", "/rl", "HIGHEST", "/f")
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating autostart task:", err)
-	} else {
-		fmt.Println("Successfully created autostart task.")
-		cfg, err := config.Load()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to load config:", err)
-			return
-		}
-		cfg.AutostartEnabled = true
-		if err := cfg.Save(); err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to save config:", err)
-		}
-	}
+	return destPath, nil
 }
