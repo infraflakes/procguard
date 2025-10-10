@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+
+	"procguard/internal/database"
 	"procguard/internal/logsearch"
 	"strings"
 
@@ -24,9 +26,15 @@ var findCmd = &cobra.Command{
 	Short: "Find log lines by program name (case-insensitive)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		db, err := database.OpenDB() // Use OpenDB for read-only clients
+		if err != nil {
+			return fmt.Errorf("failed to open database: %w", err)
+		}
+		defer db.Close()
+
 		query := strings.ToLower(args[0])
 
-		results, err := logsearch.Search(query, since, until)
+		results, err := logsearch.Search(db, query, since, until)
 		if err != nil {
 			return err
 		}

@@ -1,17 +1,16 @@
+
 package logsearch
 
 import (
-	"bufio"
+	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
-	"procguard/internal/logger"
+	"strconv"
 	"strings"
 	"time"
 )
 
-// Search performs a search on the log file.
-func Search(query, since, until string) ([][]string, error) {
+// Search performs a search on the app_events table in the database.
+func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 	var sinceTime, untilTime time.Time
 	var err error
 
@@ -29,46 +28,56 @@ func Search(query, since, until string) ([][]string, error) {
 		}
 	}
 
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		return nil, fmt.Errorf("could not get user cache dir: %w", err)
-	}
-	logFile := filepath.Join(cacheDir, "procguard", "logs", "events.log")
+	// Build the query
+	q := "SELECT process_name, pid, parent_process_name, start_time, end_time FROM app_events WHERE 1=1"
+	args := make([]interface{}, 0)
 
-	file, err := os.Open(logFile)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open log: %w", err)
+	if query != "" {
+		q += " AND (process_name LIKE ? OR parent_process_name LIKE ?)"
+		likeQuery := "%" + query + "%"
+		args = append(args, likeQuery, likeQuery)
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			logger.Get().Printf("Error closing log file: %v", err)
-		}
-	}()
+
+	if !sinceTime.IsZero() {
+		sinceUnix := sinceTime.Unix()
+		q += " AND (end_time IS NULL OR end_time >= ?)"
+		args = append(args, sinceUnix)
+	}
+
+	if !untilTime.IsZero() {
+		untilUnix := untilTime.Unix()
+		q += " AND start_time <= ?"
+		args = append(args, untilUnix)
+	}
+
+	q += " ORDER BY start_time DESC"
+
+	rows, err := db.Query(q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("database query failed: %w", err)
+	}
+	defer rows.Close()
 
 	var results [][]string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, " | ")
-		if len(parts) < 4 {
+	for rows.Next() {
+		var processName, parentProcessName string
+		var pid int32
+		var startTime, endTime sql.NullInt64
+
+		if err := rows.Scan(&processName, &pid, &parentProcessName, &startTime, &endTime); err != nil {
 			continue
 		}
 
-		logTime, err := time.ParseInLocation("2006-01-02 15:04:05", parts[0], time.Local)
-		if err != nil {
-			continue
-		}
-
-		if !sinceTime.IsZero() && logTime.Before(sinceTime) {
-			continue
-		}
-		if !untilTime.IsZero() && logTime.After(untilTime) {
-			continue
-		}
-
-		if query == "" || strings.Contains(strings.ToLower(parts[1]), query) || strings.Contains(strings.ToLower(parts[3]), query) {
-			results = append(results, parts)
-		}
+		startTimeStr := time.Unix(startTime.Int64, 0).Format("2006-01-02 15:04:05")
+		
+		// Format the results into the structure the frontend expects
+		// [Time, ProcessName, PID, ParentName]
+		results = append(results, []string{
+			startTimeStr,
+			processName,
+			strconv.Itoa(int(pid)),
+			parentProcessName,
+		})
 	}
 
 	return results, nil
