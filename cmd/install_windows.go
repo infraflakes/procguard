@@ -1,3 +1,5 @@
+//go:build windows
+
 package cmd
 
 import (
@@ -14,7 +16,7 @@ const extensionId = "ilaocldmkhlifnikhinkmiepekpbefoh"
 const hostName = "com.nixuris.procguard"
 
 // installNativeHost sets up the native messaging host for Chrome.
-func installNativeHost() error {
+func installNativeHost(exePath string) error {
 	log := logger.Get()
 	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + hostName
 
@@ -36,13 +38,6 @@ func installNativeHost() error {
 	}
 	defer k.Close()
 
-	// Get the path to the executable.
-	exePath, err := os.Executable()
-	if err != nil {
-		log.Printf("Failed to get executable path: %v", err)
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
 	// Get the user cache directory.
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -50,13 +45,14 @@ func installNativeHost() error {
 		return fmt.Errorf("failed to get user cache dir: %w", err)
 	}
 	appDataDir := filepath.Join(cacheDir, "procguard")
-	if err := os.MkdirAll(appDataDir, 0755); err != nil {
-		log.Printf("Failed to create app data directory: %v", err)
-		return fmt.Errorf("failed to create app data directory: %w", err)
+	configDir := filepath.Join(appDataDir, "config")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		log.Printf("Failed to create config directory: %v", err)
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	// Create the manifest file in the app data directory.
-	manifestPath := filepath.Join(appDataDir, "procguard.json")
+	// Create the manifest file in the config directory.
+	manifestPath := filepath.Join(configDir, "native-host.json")
 	if err := createManifest(manifestPath, exePath, extensionId); err != nil {
 		log.Printf("Failed to create manifest file: %v", err)
 		return fmt.Errorf("failed to create manifest file: %w", err)

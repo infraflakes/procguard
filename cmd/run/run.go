@@ -3,6 +3,8 @@ package run
 import (
 	"fmt"
 	"procguard/cmd/daemon"
+	"procguard/internal/database"
+	"procguard/internal/logger"
 	"procguard/services/api"
 
 	"github.com/spf13/cobra"
@@ -29,7 +31,14 @@ var daemonCmd = &cobra.Command{
 	Short: "Run the ProcGuard daemon",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Starting ProcGuard daemon...")
-		daemon.Start()
+		appLogger := logger.Get()
+		db, err := database.InitDB()
+		if err != nil {
+			appLogger.Fatalf("Failed to initialize database: %v", err)
+		}
+		defer db.Close()
+
+		daemon.Start(appLogger, db)
 		// Keep the main goroutine alive
 		select {}
 	},

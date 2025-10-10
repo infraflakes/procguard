@@ -83,6 +83,16 @@
       <div id="web-log-controls">
         <button onclick="blockSelectedWebsites()">Chặn mục đã chọn</button>
       </div>
+      <div id="web-time-filter-container">
+          <span>Lọc theo thời gian:</span>
+          <button onclick="searchWebLogs({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
+          <button onclick="searchWebLogs({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
+          <button onclick="searchWebLogs({since: '7 days ago', until: 'now'})">7 ngày qua</button>
+          <br>
+          <span>Từ: </span><input type="date" id="web_since_date"> <input type="time" id="web_since_time" step="60">
+          <span>Đến: </span><input type="date" id="web_until_date"> <input type="time" id="web_until_time" step="60">
+          <button onclick="searchWebLogs()">Xác nhận</button>
+      </div>
       <div id="web-log-items"></div>
     </div>
     <div id="web-blocklist-view" style="display:none;">
@@ -102,6 +112,12 @@
   <div id="settings-view" style="display:none;">
     <h2>Cài đặt</h2>
     <div id="settings-controls">
+        <div id="autostart-settings">
+            <h4>Khởi động cùng Windows</h4>
+            <p>Trạng thái: <b id="autostart-status">Không rõ</b></p>
+            <button id="autostart-toggle-btn" onclick="toggleAutostart()">Toggle</button>
+        </div>
+        <hr>
         <button onclick="uninstall()" style="background-color: #d9534f;">Gỡ cài đặt ProcGuard</button>
         <p><b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt ProcGuard khỏi hệ thống.</p>
     </div>
@@ -127,6 +143,10 @@
     const sinceTimeInput = document.getElementById('since_time');
     const untilDateInput = document.getElementById('until_date');
     const untilTimeInput = document.getElementById('until_time');
+    const webSinceDateInput = document.getElementById('web_since_date');
+    const webSinceTimeInput = document.getElementById('web_since_time');
+    const webUntilDateInput = document.getElementById('web_until_date');
+    const webUntilTimeInput = document.getElementById('web_until_time');
     const blocklistItems = document.getElementById('blocklist-items');
     const uninstallModal = document.getElementById('uninstall-modal');
     const uninstallForm = document.getElementById('uninstall-form');
@@ -138,6 +158,10 @@
     const installExtensionBtn = document.getElementById('install-extension-btn');
     const webBlocklistItems = document.getElementById('web-blocklist-items');
     const webLogItems = document.getElementById('web-log-items');
+    const autostartStatusEl = document.getElementById('autostart-status');
+    const autostartToggleBtn = document.getElementById('autostart-toggle-btn');
+
+    let isAutostartEnabled = false;
 
     const EXTENSION_ID = 'ilaocldmkhlifnikhinkmiepekpbefoh';
 
@@ -153,6 +177,45 @@
         const today = `${year}-${month}-${day}`;
         sinceDateInput.value = today;
         untilDateInput.value = today;
+        webSinceDateInput.value = today;
+        webUntilDateInput.value = today;
+    }
+
+    async function loadAutostartStatus() {
+        try {
+            const res = await fetch('/api/settings/autostart/status');
+            if (!res.ok) {
+                autostartStatusEl.textContent = "Không hỗ trợ trên HĐH này";
+                autostartToggleBtn.disabled = true;
+                return;
+            }
+            const data = await res.json();
+            isAutostartEnabled = data.enabled;
+            autostartStatusEl.textContent = isAutostartEnabled ? "Đã bật" : "Đã tắt";
+            autostartToggleBtn.textContent = isAutostartEnabled ? "Tắt tự động khởi động" : "Bật tự động khởi động";
+            autostartToggleBtn.disabled = false;
+        } catch (e) {
+            autostartStatusEl.textContent = "Lỗi khi tải trạng thái";
+            autostartToggleBtn.disabled = true;
+        }
+    }
+
+    async function toggleAutostart() {
+        const endpoint = isAutostartEnabled ? '/api/settings/autostart/disable' : '/api/settings/autostart/enable';
+        try {
+            autostartToggleBtn.disabled = true;
+            const res = await fetch(endpoint, { method: 'POST' });
+            if (!res.ok) {
+                const errorText = await res.text();
+                alert(`Thao tác thất bại: ${errorText}`);
+            } else {
+                await loadAutostartStatus(); // Refresh status after action
+            }
+        } catch (e) {
+            alert(`Đã xảy ra lỗi: ${e.message}`);
+        } finally {
+            autostartToggleBtn.disabled = false;
+        }
     }
 
     function showTopLevelView(viewName) {
@@ -166,6 +229,8 @@
           showSubView('search-view', 'app-management-view');
         } else if (viewName === 'web-management-view') {
           showSubView('web-log-view', 'web-management-view');
+        } else if (viewName === 'settings-view') {
+          loadAutostartStatus();
         }
     }
 
@@ -191,13 +256,44 @@
       }
     }
 
-    async function loadWebLogs() {
-        const res = await fetch('/api/web-logs');
+    async function searchWebLogs(range) {
+        let since = '';
+        let until = '';
+
+        if (range) {
+            since = range.since;
+            until = range.until;
+        } else {
+            if (webSinceDateInput.value && webSinceTimeInput.value) {
+                since = `${webSinceDateInput.value}T${webSinceTimeInput.value}`;
+            }
+            if (webUntilDateInput.value && webUntilTimeInput.value) {
+                until = `${webUntilDateInput.value}T${webUntilTimeInput.value}`;
+            }
+        }
+        await loadWebLogs(since, until);
+    }
+
+    async function loadWebLogs(since = '', until = '') {
+        let url = '/api/web-logs';
+        const params = new URLSearchParams();
+        if (since) {
+            params.append('since', since);
+        }
+        if (until) {
+            params.append('until', until);
+        }
+        const queryString = params.toString();
+        if (queryString) {
+            url += `?${queryString}`;
+        }
+
+        const res = await fetch(url);
         const data = await res.json();
         webLogItems.innerHTML = '';
         if (data && data.length > 0) {
-            // Reverse the array to show newest logs first
-            webLogItems.innerHTML = data.reverse().map(l => {
+            // Data is already sorted by timestamp descending from the server
+            webLogItems.innerHTML = data.map(l => {
                 const urlString = l[1];
                 let domain = '';
                 try {

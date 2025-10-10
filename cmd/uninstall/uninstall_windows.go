@@ -5,26 +5,27 @@ package uninstall
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"procguard/cmd/daemon"
 	"procguard/internal/blocklist"
 	"strings"
 
 	"golang.org/x/sys/windows/registry"
 )
 
-const taskName = "ProcGuardDaemon"
+const appName = "ProcGuard"
 const hostName = "com.nixuris.procguard"
 
 func platformUninstall() error {
-	// Unblock all files
+	// Unblock all files first
 	if err := unblockAll(); err != nil {
-		return err
+		// Log a warning but continue, as the user might want to clean up the rest of the installation.
+		fmt.Fprintf(os.Stderr, "Warning: could not unblock all files: %v\n", err)
 	}
 
-	// Remove Task Scheduler task
-	if err := removeTask(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not remove task scheduler entry: %v\n", err)
+	// Remove autostart registry entry
+	if err := daemon.RemoveAutostart(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not remove autostart registry entry: %v\n", err)
 	}
 
 	// Remove Native Messaging Host configuration
@@ -32,14 +33,18 @@ func platformUninstall() error {
 		fmt.Fprintf(os.Stderr, "Warning: could not remove native messaging host configuration: %v\n", err)
 	}
 
-	// Remove data files
-	if err := removeDataFiles(); err != nil {
-		return err
+	// Remove all application data, logs, and backups from LOCALAPPDATA
+	fmt.Println("Removing all application data...")
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData == "" {
+		return fmt.Errorf("could not find LOCALAPPDATA directory")
 	}
+	appDataDir := filepath.Join(localAppData, appName)
 
-	// Remove backup executable
-	return removeBackup()
+	return os.RemoveAll(appDataDir)
 }
+
+
 
 func removeNativeHost() error {
 	fmt.Println("Removing Native Messaging Host configuration...")
@@ -82,32 +87,4 @@ func unblockAll() error {
 	return nil
 }
 
-func removeTask() error {
-	fmt.Println("Removing Task Scheduler task...")
-	// The /f flag is to force the deletion.
-	return exec.Command("schtasks", "/delete", "/tn", taskName, "/f").Run()
-}
 
-func removeDataFiles() error {
-	fmt.Println("Removing data files...")
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		return err
-	}
-	procguardDir := filepath.Join(cacheDir, "procguard")
-	logsDir := filepath.Join(procguardDir, "logs")
-
-	if err := os.RemoveAll(logsDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not remove logs directory: %v\n", err)
-	}
-	return os.RemoveAll(procguardDir)
-}
-
-func removeBackup() error {
-	fmt.Println("Removing backup executable...")
-	localAppData := os.Getenv("LOCALAPPDATA")
-	if localAppData == "" {
-		return fmt.Errorf("could not find LOCALAPPDATA directory")
-	}
-	return os.RemoveAll(filepath.Join(localAppData, "ProcGuard"))
-}

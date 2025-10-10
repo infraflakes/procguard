@@ -6,83 +6,128 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"procguard/internal/config"
+
+	"golang.org/x/sys/windows/registry"
 )
 
-const taskName = "ProcGuardDaemon"
+const appName = "ProcGuard"
 
-// EnsureAutostartTask checks if the autostart task exists and creates it if it doesn't.
-// On creation, it copies the executable to a persistent location and points the task there.
-func EnsureAutostartTask() {
-	// Check if the task already exists.
-	err := exec.Command("schtasks", "/query", "/tn", taskName).Run()
-	if err == nil {
-		return // Task already exists, do nothing.
+// EnsureAutostart creates a registry entry and returns the path to the persistent executable.
+func EnsureAutostart() (string, error) {
+	// The path to the executable in the persistent location
+	destPath, err := copyExecutableToAppData()
+	if err != nil {
+		return "", fmt.Errorf("failed to set up persistent executable: %w", err)
+	}
+
+	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.QUERY_VALUE|registry.SET_VALUE)
+	if err != nil {
+		return destPath, fmt.Errorf("failed to open Run registry key: %w", err)
+	}
+	defer key.Close()
+
+	// Check if the value already exists and is correct.
+	currentPath, _, err := key.GetStringValue(appName)
+	if err == nil && currentPath == destPath {
+		return destPath, nil // Entry already exists and is correct.
 	}
 
 	fmt.Println("Performing first-time setup for ProcGuard persistence...")
 
-	// 1. Get path of the currently running executable (the source).
+	// Set the registry value to point to the persistent executable path.
+	if err := key.SetStringValue(appName, destPath); err != nil {
+		return destPath, fmt.Errorf("failed to set startup registry key: %w", err)
+	}
+
+	// Update the config file to reflect the change
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
+	} else {
+		cfg.AutostartEnabled = true
+		if err := cfg.Save(); err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to save config to update autostart status:", err)
+		}
+	}
+
+	fmt.Println("Successfully created startup registry entry.")
+	return destPath, nil
+}
+
+// RemoveAutostart removes the registry entry that starts the application on logon.
+func RemoveAutostart() error {
+	fmt.Println("Removing autostart registry entry...")
+	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+	if err != nil {
+		if err == registry.ErrNotExist {
+			return nil // Key doesn't exist, nothing to do.
+		}
+		return err
+	}
+	defer key.Close()
+
+	// Delete the value. If it doesn't exist, this will return an error that we can ignore.
+	if err := key.DeleteValue(appName); err != nil && err != registry.ErrNotExist {
+		return err
+	}
+
+	// Update the config file to reflect the change
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
+	} else {
+		cfg.AutostartEnabled = false
+		if err := cfg.Save(); err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to save config to update autostart status:", err)
+		}
+	}
+
+	return nil
+}
+
+// copyExecutableToAppData copies the current executable to a hidden, persistent location in LOCALAPPDATA.
+// It returns the path to the new executable.
+func copyExecutableToAppData() (string, error) {
 	sourcePath, err := os.Executable()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error getting executable path:", err)
-		return
+		return "", fmt.Errorf("error getting executable path: %w", err)
 	}
 
-	// 2. Define the hidden backup location (the destination).
 	localAppData := os.Getenv("LOCALAPPDATA")
 	if localAppData == "" {
-		fmt.Fprintln(os.Stderr, "Could not find LOCALAPPDATA directory.")
-		return
+		return "", fmt.Errorf("could not find LOCALAPPDATA directory")
 	}
-	destDir := filepath.Join(localAppData, "ProcGuard")
+	destDir := filepath.Join(localAppData, appName)
 	destPath := filepath.Join(destDir, "ProcGuardSvc.exe")
 
-	// 3. Copy the executable to the backup location.
+	// If the file already exists, no need to copy again.
+	if _, err := os.Stat(destPath); err == nil {
+		return destPath, nil
+	}
+
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating destination directory:", err)
-		return
+		return "", fmt.Errorf("error creating destination directory: %w", err)
 	}
 
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error opening source executable:", err)
-		return
+		return "", fmt.Errorf("error opening source executable: %w", err)
 	}
 	defer sourceFile.Close()
 
 	destFile, err := os.Create(destPath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating destination executable:", err)
-		return
+		return "", fmt.Errorf("error creating destination executable: %w", err)
 	}
 	defer destFile.Close()
 
 	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error copying executable:", err)
-		return
+		return "", fmt.Errorf("error copying executable: %w", err)
 	}
 
 	fmt.Println("Executable backed up to", destPath)
-
-	// 4. Create the scheduled task pointing to the NEW backup location.
-	fmt.Println("Creating autostart task...")
-	cmd := exec.Command("schtasks", "/create", "/tn", taskName, "/tr", `"`+destPath+`"`, "/sc", "ONLOGON", "/rl", "HIGHEST", "/f")
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating autostart task:", err)
-	} else {
-		fmt.Println("Successfully created autostart task.")
-		cfg, err := config.Load()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to load config:", err)
-			return
-		}
-		cfg.AutostartEnabled = true
-		if err := cfg.Save(); err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to save config:", err)
-		}
-	}
+	return destPath, nil
 }

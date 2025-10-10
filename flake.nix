@@ -18,6 +18,8 @@
           golangci-lint
           cmake
           nodejs_24
+          typescript
+          electron_38
         ];
       };
     };
