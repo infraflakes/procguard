@@ -79,6 +79,7 @@ var DefaultWindows = []string{
 	"ShellExperienceHost.exe",
 	"audiodg.exe",
 	"ApplicationFrameHost.exe",
+	"backgroundTaskHost.exe",
 	"SystemSettings.exe",
 	"wininit.exe",
 	"fontdrvhost.exe",

@@ -3,9 +3,8 @@ package daemon
 
 import (
 	"database/sql"
-	"encoding/json"
 	"log"
-	"net/http"
+	"procguard/internal/client"
 	"procguard/internal/database"
 	"procguard/internal/logger"
 	"slices"
@@ -163,16 +162,6 @@ func runProcessKiller(appLogger *log.Logger) {
 }
 
 func fetchBlocklist() ([]string, error) {
-	resp, err := http.Get("http://127.0.0.1:58141/api/blocklist")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var blocklist []string
-	if err := json.NewDecoder(resp.Body).Decode(&blocklist); err != nil {
-		return nil, err
-	}
-
-	return blocklist, nil
+	c := client.New()
+	return c.GetBlocklist()
 }
