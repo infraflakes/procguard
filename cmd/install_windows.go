@@ -14,7 +14,7 @@ const extensionId = "ilaocldmkhlifnikhinkmiepekpbefoh"
 const hostName = "com.nixuris.procguard"
 
 // installNativeHost sets up the native messaging host for Chrome.
-func installNativeHost() error {
+func installNativeHost(exePath string) error {
 	log := logger.Get()
 	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + hostName
 
@@ -35,13 +35,6 @@ func installNativeHost() error {
 		return fmt.Errorf("failed to create registry key: %w", err)
 	}
 	defer k.Close()
-
-	// Get the path to the executable.
-	exePath, err := os.Executable()
-	if err != nil {
-		log.Printf("Failed to get executable path: %v", err)
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
 
 	// Get the user cache directory.
 	cacheDir, err := os.UserCacheDir()

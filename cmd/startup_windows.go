@@ -14,8 +14,15 @@ import (
 
 // HandleDefaultStartup implements the main startup logic for GUI mode on Windows.
 func HandleDefaultStartup() {
-	// Set up the native messaging host if it's not already installed.
-	if err := installNativeHost(); err != nil {
+	// Set up autostart and get the path to the persistent executable.
+	persistentExePath, err := daemon.EnsureAutostart()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to set up autostart: %v\n", err)
+		// Continue execution even if autostart fails.
+	}
+
+	// Set up the native messaging host using the persistent path.
+	if err := installNativeHost(persistentExePath); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to install native messaging host: %v\n", err)
 		// We don't want to block the main application from starting if this fails.
 	}
@@ -25,7 +32,7 @@ func HandleDefaultStartup() {
 	guiUrl := "http://" + guiAddress
 
 	// Check if a server is already running
-	_, err := http.Get(guiUrl + "/ping")
+	_, err = http.Get(guiUrl + "/ping")
 	if err == nil {
 		// Instance is already running. Just open the browser and exit.
 		openBrowser(guiUrl)
@@ -34,10 +41,6 @@ func HandleDefaultStartup() {
 
 	// No instance is running. This is the first instance.
 	fmt.Println("Starting ProcGuard services...")
-
-	// Set up autostart for Windows if applicable.
-
-	daemon.EnsureAutostart()
 
 	// Start the API and daemon services in the background.
 	exePath, err := os.Executable()

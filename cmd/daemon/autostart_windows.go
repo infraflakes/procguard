@@ -7,43 +7,53 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"procguard/internal/config"
 
 	"golang.org/x/sys/windows/registry"
 )
 
 const appName = "ProcGuard"
 
-// EnsureAutostart creates a registry entry in the current user's Run key to start the application on logon.
-func EnsureAutostart() {
+// EnsureAutostart creates a registry entry and returns the path to the persistent executable.
+func EnsureAutostart() (string, error) {
 	// The path to the executable in the persistent location
 	destPath, err := copyExecutableToAppData()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Failed to set up persistent executable:", err)
-		return
+		return "", fmt.Errorf("failed to set up persistent executable: %w", err)
 	}
 
 	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Failed to open Run registry key:", err)
-		return
+		return destPath, fmt.Errorf("failed to open Run registry key: %w", err)
 	}
 	defer key.Close()
 
 	// Check if the value already exists and is correct.
 	currentPath, _, err := key.GetStringValue(appName)
 	if err == nil && currentPath == destPath {
-		return // Entry already exists and is correct.
+		return destPath, nil // Entry already exists and is correct.
 	}
 
 	fmt.Println("Performing first-time setup for ProcGuard persistence...")
 
 	// Set the registry value to point to the persistent executable path.
 	if err := key.SetStringValue(appName, destPath); err != nil {
-		fmt.Fprintln(os.Stderr, "Failed to set startup registry key:", err)
-		return
+		return destPath, fmt.Errorf("failed to set startup registry key: %w", err)
+	}
+
+	// Update the config file to reflect the change
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
+	} else {
+		cfg.AutostartEnabled = true
+		if err := cfg.Save(); err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to save config to update autostart status:", err)
+		}
 	}
 
 	fmt.Println("Successfully created startup registry entry.")
+	return destPath, nil
 }
 
 // copyExecutableToAppData copies the current executable to a hidden, persistent location in LOCALAPPDATA.
