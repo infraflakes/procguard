@@ -3,35 +3,17 @@ package daemon
 import (
 	"database/sql"
 	"log"
+	"os"
 	"procguard/internal/client"
-	"procguard/internal/database"
+	"procguard/internal/ignore"
 	"procguard/internal/logger"
+	"procguard/internal/winutil"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/process"
-	"github.com/spf13/cobra"
 )
-
-var DaemonCmd = &cobra.Command{
-	Use:   "daemon",
-	Short: "Run the background daemon for process monitoring and blocking",
-	Run: func(cmd *cobra.Command, args []string) {
-		appLogger := logger.Get()
-
-		db, err := database.InitDB()
-		if err != nil {
-			appLogger.Fatalf("Failed to initialize database: %v", err)
-		}
-		defer db.Close()
-
-		Start(appLogger, db)
-
-		// Keep the main goroutine alive
-		select {}
-	},
-}
 
 // Start runs the core daemon logic in goroutines.
 func Start(appLogger *log.Logger, db *sql.DB) {
@@ -161,4 +143,39 @@ func runProcessKiller(appLogger *log.Logger) {
 func fetchBlocklist() ([]string, error) {
 	c := client.New()
 	return c.GetBlocklist()
+}
+
+// shouldLogProcess determines if a process should be logged based on platform-specific rules.
+func shouldLogProcess(p *process.Process) bool {
+	name, err := p.Name()
+	if err != nil || name == "" {
+		return false // Skip processes with no name
+	}
+
+	// Universal check: ignore self
+	if p.Pid == int32(os.Getpid()) {
+		return false
+	}
+
+	parent, err := p.Parent()
+	if err != nil {
+		return false // Skip processes with no parent
+	}
+	parentName, _ := parent.Name()
+
+	// Do not log a process if its parent has the same name.
+	if name == parentName {
+		return false
+	}
+
+	// Windows-specific checks
+	il, err := winutil.GetProcessIntegrityLevel(uint32(p.Pid))
+	if err == nil && il >= winutil.SECURITY_MANDATORY_SYSTEM_RID {
+		return false // Skip system/high integrity processes
+	}
+	if ignore.IsIgnored(name, ignore.DefaultWindows) || ignore.IsIgnored(parentName, ignore.DefaultWindows) {
+		return false
+	}
+
+	return true
 }
