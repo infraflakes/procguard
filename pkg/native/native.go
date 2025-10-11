@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"procguard/internal/blocklist/webblocklist"
-	"procguard/internal/database"
-	"procguard/internal/logger"
+	"procguard/pkg/blocklist/web"
+	"procguard/pkg/database"
+	"procguard/pkg/logger"
 	"reflect"
 	"strings"
 	"time"
@@ -80,7 +80,7 @@ func Run() {
 			}
 			writeUrlToDatabase(db, req.Payload)
 		case "get_web_blocklist":
-			list, err := webblocklist.Load()
+			list, err := web.Load()
 			if err != nil {
 				log.Printf("Error loading web blocklist: %v", err)
 				continue
@@ -91,7 +91,7 @@ func Run() {
 			}
 			sendMessage(resp)
 		case "add_to_web_blocklist":
-			if _, err := webblocklist.Add(req.Payload); err != nil {
+			if _, err := web.Add(req.Payload); err != nil {
 				log.Printf("Error adding to web blocklist: %v", err)
 			}
 		default:
@@ -114,7 +114,7 @@ func pollWebBlocklist() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		list, err := webblocklist.Load()
+		list, err := web.Load()
 		if err != nil {
 			log.Printf("Error loading web blocklist for polling: %v", err)
 			continue

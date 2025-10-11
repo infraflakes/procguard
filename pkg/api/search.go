@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/internal/logsearch"
+	"procguard/pkg/logsearch"
 	"strings"
 )
 

@@ -3,8 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/internal/auth"
-	"procguard/internal/config"
+	"procguard/pkg/auth"
+	"procguard/pkg/config"
 )
 
 func (s *Server) handleLoginTemplate(w http.ResponseWriter, r *http.Request) {

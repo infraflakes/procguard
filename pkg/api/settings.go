@@ -5,8 +5,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/internal/config"
-	"procguard/internal/daemon"
+	"procguard/pkg/config"
+	"procguard/pkg/daemon"
 )
 
 func (s *Server) handleGetAutostartStatus(w http.ResponseWriter, r *http.Request) {

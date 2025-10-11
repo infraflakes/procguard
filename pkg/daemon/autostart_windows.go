@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"procguard/internal/config"
+	"procguard/pkg/config"
 
 	"golang.org/x/sys/windows/registry"
 )

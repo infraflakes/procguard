@@ -1,4 +1,4 @@
-package webblocklist
+package web
 
 import (
 	"encoding/json"

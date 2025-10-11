@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"procguard/internal/database"
-	"procguard/internal/logger"
+	"procguard/pkg/database"
+	"procguard/pkg/logger"
 	"sync"
 )
 
