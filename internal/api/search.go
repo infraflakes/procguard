@@ -1,12 +1,36 @@
-package logsearch
+package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
+
+func (s *Server) apiSearch(w http.ResponseWriter, r *http.Request) {
+	query := strings.ToLower(r.URL.Query().Get("q"))
+	sinceStr := r.URL.Query().Get("since")
+	untilStr := r.URL.Query().Get("until")
+
+	s.Logger.Printf("Searching logs with query: '%s', since: '%s', until: '%s'", query, sinceStr, untilStr)
+
+	results, err := Search(s.db, query, sinceStr, untilStr)
+	if err != nil {
+		s.Logger.Printf("Error searching logs: %v", err)
+		http.Error(w, "Failed to search logs", http.StatusInternalServerError)
+		return
+	}
+
+	s.Logger.Printf("Found %d log entries.", len(results))
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(results); err != nil {
+		s.Logger.Printf("Error encoding response: %v", err)
+	}
+}
 
 // Search performs a search on the app_events table in the database.
 func Search(db *sql.DB, query, since, until string) ([][]string, error) {
@@ -80,36 +104,4 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 	}
 
 	return results, nil
-}
-
-// parseTime is a helper function to handle our specific time logic.
-func parseTime(input string) (time.Time, error) {
-	now := time.Now()
-	lowerInput := strings.ToLower(strings.TrimSpace(input))
-
-	switch lowerInput {
-	case "now":
-		return now, nil
-	case "1 hour ago":
-		return now.Add(-1 * time.Hour), nil
-	case "24 hours ago":
-		return now.Add(-24 * time.Hour), nil
-	case "7 days ago":
-		return now.AddDate(0, 0, -7), nil
-	}
-
-	layouts := []string{
-		"2006-01-02 15:04:05",
-		"2006-01-02T15:04",
-		"2006-01-02T15:04:05",
-	}
-
-	for _, layout := range layouts {
-		parsedTime, err := time.ParseInLocation(layout, input, time.Local)
-		if err == nil {
-			return parsedTime, nil
-		}
-	}
-
-	return time.Time{}, fmt.Errorf("could not parse time: %s", input)
 }

@@ -12,10 +12,10 @@ import (
 
 const blockListFile = "blocklist.json"
 
-// Load reads the blocklist file from the user's cache directory,
+// LoadApp reads the blocklist file from the user's cache directory,
 // normalizes all entries to lowercase, and returns them as a slice of strings.
 // If the file doesn't exist, it returns an empty list.
-func Load() ([]string, error) {
+func LoadApp() ([]string, error) {
 	cacheDir, _ := os.UserCacheDir()
 	p := filepath.Join(cacheDir, "procguard", blockListFile)
 
@@ -40,10 +40,10 @@ func Load() ([]string, error) {
 	return list, nil
 }
 
-// Save writes the given list of strings to the blocklist file in the
+// SaveApp writes the given list of strings to the blocklist file in the
 // user's cache directory. It normalizes all entries to lowercase before saving.
 // It also sets appropriate file permissions to secure the file.
-func Save(list []string) error {
+func SaveApp(list []string) error {
 	// Normalize all entries to lowercase to ensure consistency.
 	for i := range list {
 		list[i] = strings.ToLower(list[i])
@@ -66,9 +66,9 @@ func Save(list []string) error {
 	return platformLock(p) // build-tag dispatch
 }
 
-// Add adds a program to the blocklist.
-func Add(name string) (string, error) {
-	list, err := Load()
+// AddApp adds a program to the blocklist.
+func AddApp(name string) (string, error) {
+	list, err := LoadApp()
 	if err != nil {
 		return "", err
 	}
@@ -81,16 +81,16 @@ func Add(name string) (string, error) {
 	}
 
 	list = append(list, lowerName)
-	if err := Save(list); err != nil {
+	if err := SaveApp(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "added", nil
 }
 
-// Remove removes a program from the blocklist.
-func Remove(name string) (string, error) {
-	list, err := Load()
+// RemoveApp removes a program from the blocklist.
+func RemoveApp(name string) (string, error) {
+	list, err := LoadApp()
 	if err != nil {
 		return "", err
 	}
@@ -102,21 +102,21 @@ func Remove(name string) (string, error) {
 	}
 
 	list = slices.Delete(list, idx, idx+1)
-	if err := Save(list); err != nil {
+	if err := SaveApp(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "removed", nil
 }
 
-// Clear clears the blocklist.
-func Clear() error {
-	return Save([]string{})
+// ClearApp clears the blocklist.
+func ClearApp() error {
+	return SaveApp([]string{})
 }
 
-// SaveToFile saves the current blocklist to a file.
-func SaveToFile(path string) error {
-	list, err := Load()
+// SaveAppToFile saves the current blocklist to a file.
+func SaveAppToFile(path string) error {
+	list, err := LoadApp()
 	if err != nil {
 		return err
 	}
@@ -137,8 +137,8 @@ func SaveToFile(path string) error {
 	return nil
 }
 
-// LoadFromFile loads a blocklist from a file, merging it with the existing list.
-func LoadFromFile(path string) error {
+// LoadAppFromFile loads a blocklist from a file, merging it with the existing list.
+func LoadAppFromFile(path string) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("load: %w", err)
@@ -158,7 +158,7 @@ func LoadFromFile(path string) error {
 		newEntries = savedList.Blocked
 	}
 
-	existingList, err := Load()
+	existingList, err := LoadApp()
 	if err != nil {
 		return err
 	}
@@ -169,5 +169,5 @@ func LoadFromFile(path string) error {
 		}
 	}
 
-	return Save(existingList)
+	return SaveApp(existingList)
 }

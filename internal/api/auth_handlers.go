@@ -3,21 +3,21 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/pkg/auth"
-	"procguard/pkg/config"
+	"procguard/internal/config"
+	"procguard/gui"
 )
 
 func (s *Server) handleLoginTemplate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if _, err := w.Write(loginHTML); err != nil {
-		s.logger.Printf("Error writing response: %v", err)
+	if _, err := w.Write(gui.LoginHTML); err != nil {
+		s.Logger.Printf("Error writing response: %v", err)
 	}
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	s.isAuthenticated = false
-	s.mu.Unlock()
+	s.Mu.Lock()
+	s.IsAuthenticated = false
+	s.Mu.Unlock()
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
@@ -29,7 +29,7 @@ func (s *Server) handleHasPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	hasPassword := cfg.PasswordHash != ""
 	if err := json.NewEncoder(w).Encode(map[string]bool{"hasPassword": hasPassword}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 
@@ -48,16 +48,16 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if auth.CheckPasswordHash(req.Password, cfg.PasswordHash) {
-		s.mu.Lock()
-		s.isAuthenticated = true
-		s.mu.Unlock()
+	if CheckPasswordHash(req.Password, cfg.PasswordHash) {
+		s.Mu.Lock()
+		s.IsAuthenticated = true
+		s.Mu.Unlock()
 		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
-			s.logger.Printf("Error encoding response: %v", err)
+			s.Logger.Printf("Error encoding response: %v", err)
 		}
 	} else {
 		if err := json.NewEncoder(w).Encode(map[string]bool{"success": false}); err != nil {
-			s.logger.Printf("Error encoding response: %v", err)
+			s.Logger.Printf("Error encoding response: %v", err)
 		}
 	}
 }
@@ -82,7 +82,7 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := auth.HashPassword(req.Password)
+	hash, err := HashPassword(req.Password)
 	if err != nil {
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
 		return
@@ -94,10 +94,10 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.mu.Lock()
-	s.isAuthenticated = true
-	s.mu.Unlock()
+	s.Mu.Lock()
+	s.IsAuthenticated = true
+	s.Mu.Unlock()
 	if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }

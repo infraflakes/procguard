@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"procguard/pkg/blocklist/web"
+	"procguard/internal/blocklist"
 	"slices"
 	"strings"
 	"time"
 )
 
 func (s *Server) handleGetWebBlocklist(w http.ResponseWriter, r *http.Request) {
-	list, err := web.Load()
+	list, err := blocklist.LoadWeb()
 	if err != nil {
 		http.Error(w, "Failed to load web blocklist", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(list); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 
@@ -32,14 +32,14 @@ func (s *Server) handleAddWebBlocklist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := web.Add(req.Domain); err != nil {
+	if _, err := blocklist.AddWeb(req.Domain); err != nil {
 		http.Error(w, "Failed to add to web blocklist", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 
@@ -52,31 +52,31 @@ func (s *Server) handleRemoveWebBlocklist(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if _, err := web.Remove(req.Domain); err != nil {
+	if _, err := blocklist.RemoveWeb(req.Domain); err != nil {
 		http.Error(w, "Failed to remove from web blocklist", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 
 func (s *Server) handleClearWebBlocklist(w http.ResponseWriter, r *http.Request) {
-	if err := web.Save([]string{}); err != nil {
+	if err := blocklist.SaveWeb([]string{}); err != nil {
 		http.Error(w, "Failed to clear web blocklist", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 
 func (s *Server) handleSaveWebBlocklist(w http.ResponseWriter, r *http.Request) {
-	list, err := web.Load()
+	list, err := blocklist.LoadWeb()
 	if err != nil {
 		http.Error(w, "Failed to get web blocklist", http.StatusInternalServerError)
 		return
@@ -96,7 +96,7 @@ func (s *Server) handleSaveWebBlocklist(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Disposition", "attachment; filename=procguard_web_blocklist.json")
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write(b); err != nil {
-		s.logger.Printf("Error writing response: %v", err)
+		s.Logger.Printf("Error writing response: %v", err)
 	}
 }
 
@@ -108,7 +108,7 @@ func (s *Server) handleLoadWebBlocklist(w http.ResponseWriter, r *http.Request) 
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			s.logger.Printf("Error closing file: %v", err)
+			s.Logger.Printf("Error closing file: %v", err)
 		}
 	}()
 
@@ -133,7 +133,7 @@ func (s *Server) handleLoadWebBlocklist(w http.ResponseWriter, r *http.Request) 
 		newEntries = savedList.Blocked
 	}
 
-	existingList, err := web.Load()
+	existingList, err := blocklist.LoadWeb()
 	if err != nil {
 		http.Error(w, "Failed to load existing web blocklist", http.StatusInternalServerError)
 		return
@@ -145,14 +145,14 @@ func (s *Server) handleLoadWebBlocklist(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	if err := web.Save(existingList); err != nil {
+	if err := blocklist.SaveWeb(existingList); err != nil {
 		http.Error(w, "Failed to save merged web blocklist", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 
@@ -214,7 +214,7 @@ func (s *Server) handleGetWebLogs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(entries); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 

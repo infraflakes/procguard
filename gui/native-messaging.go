@@ -1,4 +1,4 @@
-package native
+package gui
 
 import (
 	"database/sql"
@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"procguard/pkg/blocklist/web"
-	"procguard/pkg/database"
-	"procguard/pkg/logger"
+	"procguard/internal/blocklist"
+	"procguard/internal/database"
+	"procguard/internal/daemon"
 	"reflect"
 	"strings"
 	"time"
@@ -28,7 +28,7 @@ type Response struct {
 
 // Run starts the native messaging host.
 func Run() {
-	log := logger.Get()
+	log := daemon.Get()
 	log.Println("Native messaging host started")
 
 	db, err := database.OpenDB()
@@ -80,7 +80,7 @@ func Run() {
 			}
 			writeUrlToDatabase(db, req.Payload)
 		case "get_web_blocklist":
-			list, err := web.Load()
+			list, err := blocklist.LoadWeb()
 			if err != nil {
 				log.Printf("Error loading web blocklist: %v", err)
 				continue
@@ -91,7 +91,7 @@ func Run() {
 			}
 			sendMessage(resp)
 		case "add_to_web_blocklist":
-			if _, err := web.Add(req.Payload); err != nil {
+			if _, err := blocklist.AddWeb(req.Payload); err != nil {
 				log.Printf("Error adding to web blocklist: %v", err)
 			}
 		default:
@@ -103,18 +103,18 @@ func Run() {
 func writeUrlToDatabase(db *sql.DB, url string) {
 	_, err := db.Exec("INSERT INTO web_events (url, timestamp) VALUES (?, ?)", url, time.Now().Unix())
 	if err != nil {
-		logger.Get().Printf("Failed to insert web event: %v", err)
+		daemon.Get().Printf("Failed to insert web event: %v", err)
 	}
 }
 
 func pollWebBlocklist() {
-	log := logger.Get()
+	log := daemon.Get()
 	var lastBlocklist []string
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		list, err := web.Load()
+		list, err := blocklist.LoadWeb()
 		if err != nil {
 			log.Printf("Error loading web blocklist for polling: %v", err)
 			continue
@@ -133,7 +133,7 @@ func pollWebBlocklist() {
 }
 
 func sendMessage(resp Response) {
-	log := logger.Get()
+	log := daemon.Get()
 	b, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Error marshalling response: %v", err)

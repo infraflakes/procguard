@@ -5,8 +5,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/pkg/config"
-	"procguard/pkg/daemon"
+	"procguard/internal/config"
+	"procguard/internal/daemon"
 )
 
 func (s *Server) handleGetAutostartStatus(w http.ResponseWriter, r *http.Request) {
@@ -18,7 +18,7 @@ func (s *Server) handleGetAutostartStatus(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"enabled": cfg.AutostartEnabled}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 

@@ -1,4 +1,4 @@
-package web
+package blocklist
 
 import (
 	"encoding/json"
@@ -11,10 +11,10 @@ import (
 
 const webBlocklistFile = "web_blocklist.json"
 
-// Load reads the web blocklist file from the user's cache directory,
+// LoadWeb reads the web blocklist file from the user's cache directory,
 // normalizes all entries to lowercase, and returns them as a slice of strings.
 // If the file doesn't exist, it returns an empty list.
-func Load() ([]string, error) {
+func LoadWeb() ([]string, error) {
 	cacheDir, _ := os.UserCacheDir()
 	p := filepath.Join(cacheDir, "procguard", webBlocklistFile)
 
@@ -39,9 +39,9 @@ func Load() ([]string, error) {
 	return list, nil
 }
 
-// Save writes the given list of strings to the web blocklist file in the
+// SaveWeb writes the given list of strings to the web blocklist file in the
 // user's cache directory. It normalizes all entries to lowercase before saving.
-func Save(list []string) error {
+func SaveWeb(list []string) error {
 	// Normalize all entries to lowercase to ensure consistency.
 	for i := range list {
 		list[i] = strings.ToLower(list[i])
@@ -59,9 +59,9 @@ func Save(list []string) error {
 	return os.WriteFile(p, b, 0600)
 }
 
-// Add adds a domain to the web blocklist.
-func Add(domain string) (string, error) {
-	list, err := Load()
+// AddWeb adds a domain to the web blocklist.
+func AddWeb(domain string) (string, error) {
+	list, err := LoadWeb()
 	if err != nil {
 		return "", err
 	}
@@ -74,16 +74,16 @@ func Add(domain string) (string, error) {
 	}
 
 	list = append(list, lowerDomain)
-	if err := Save(list); err != nil {
+	if err := SaveWeb(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "added", nil
 }
 
-// Remove removes a domain from the web blocklist.
-func Remove(domain string) (string, error) {
-	list, err := Load()
+// RemoveWeb removes a domain from the web blocklist.
+func RemoveWeb(domain string) (string, error) {
+	list, err := LoadWeb()
 	if err != nil {
 		return "", err
 	}
@@ -95,14 +95,14 @@ func Remove(domain string) (string, error) {
 	}
 
 	list = slices.Delete(list, idx, idx+1)
-	if err := Save(list); err != nil {
+	if err := SaveWeb(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "removed", nil
 }
 
-// Clear clears the web blocklist.
-func Clear() error {
-	return Save([]string{})
+// ClearWeb clears the web blocklist.
+func ClearWeb() error {
+	return SaveWeb([]string{})
 }

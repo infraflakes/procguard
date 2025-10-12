@@ -15,26 +15,21 @@ GO_INSTALL=$(GO_CMD) install
 GO_TEST=$(GO_CMD) test
 
 # Binary name
-BINARY_LINUX_NAME=procguard
 BINARY_WINDOWS_NAME=ProcGuardSvc.exe
 NIX_BUILD=result
 
 # Build flags
 LDFLAGS = -ldflags="-s -w -X main.version=$(VERSION)"
 
-.PHONY: all build-linux build-windows run fmt clean test install
+.PHONY: all build-windows run fmt clean test install
 
-all: build-linux build-windows
-
-build-linux:
-	@echo "Building $(BINARY_NAME) for linux..."
-	$(GO_BUILD) $(LDFLAGS) -o $(BINARY_NAME) .
+all: build-windows
 
 build-windows:
 	@echo "Generating Windows resources..."
 	go generate ./...
 	@echo "Building ProcGuardSvc.exe for windows..."
-	GOOS=windows $(GO_BUILD) -ldflags="-H windowsgui -X main.version=$(VERSION)" -o ProcGuardSvc.exe ./cmd/procguard
+	GOOS=windows $(GO_BUILD) -ldflags="-H windowsgui -X main.version=$(VERSION)" -o ProcGuardSvc.exe .
 
 run:
 	$(GO_RUN) . --
@@ -49,7 +44,6 @@ test:
 clean:
 	@echo "Cleaning..."
 	$(GO_CLEAN)
-	rm -f $(BINARY_LINUX_NAME)
 	rm -f $(BINARY_WINDOWS_NAME)
 	rm -rf $(NIX_BUILD)
 	rm -rf rsrc.syso

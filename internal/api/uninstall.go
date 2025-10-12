@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"procguard/pkg/auth"
-	"procguard/pkg/config"
-	"procguard/pkg/daemon"
-	"procguard/pkg/blocklist"
+	"procguard/internal/config"
+	"procguard/internal/daemon"
+	"procguard/internal/blocklist"
 	"strings"
 	"time"
 
@@ -35,7 +34,7 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !auth.CheckPasswordHash(req.Password, cfg.PasswordHash) {
+	if !CheckPasswordHash(req.Password, cfg.PasswordHash) {
 		http.Error(w, "Invalid password", http.StatusUnauthorized)
 		return
 	}
@@ -69,7 +68,7 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
-		s.logger.Printf("Error encoding response: %v", err)
+		s.Logger.Printf("Error encoding response: %v", err)
 	}
 }
 
@@ -97,7 +96,7 @@ func killOtherProcGuardProcesses() {
 }
 
 func unblockAll() error {
-	list, err := blocklist.Load()
+	list, err := blocklist.LoadApp()
 	if err != nil {
 		return fmt.Errorf("could not load blocklist: %w", err)
 	}

@@ -6,16 +6,16 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"procguard/pkg/database"
-	"procguard/pkg/logger"
+	"procguard/internal/database"
+	"procguard/internal/daemon"
 	"sync"
 )
 
 // Server holds the dependencies for the GUI server.
 type Server struct {
-	logger          *log.Logger
-	isAuthenticated bool
-	mu              sync.Mutex
+	Logger          *log.Logger
+	IsAuthenticated bool
+	Mu              sync.Mutex
 	db              *sql.DB
 }
 
@@ -27,13 +27,13 @@ func NewServer() (*Server, error) {
 	}
 
 	return &Server{
-		logger: logger.Get(),
+		Logger: daemon.Get(),
 		db:     db,
 	}, nil
 }
 
 // StartWebServer configures and starts the blocking web server.
-func StartWebServer(addr string) {
+func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.ServeMux)) {
 	srv, err := NewServer()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error creating server:", err)
@@ -44,6 +44,9 @@ func StartWebServer(addr string) {
 	r := http.NewServeMux()
 
 	srv.registerRoutes(r)
+	if registerExtraRoutes != nil {
+		registerExtraRoutes(srv, r)
+	}
 
 	fmt.Println("GUI listening on http://" + addr)
 	if err := http.ListenAndServe(addr, srv.authMiddleware(r)); err != nil {
@@ -55,9 +58,9 @@ func StartWebServer(addr string) {
 // authMiddleware protects all routes except login and assets
 func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		srv.mu.Lock()
-		localIsAuthenticated := srv.isAuthenticated
-		srv.mu.Unlock()
+		srv.Mu.Lock()
+		localIsAuthenticated := srv.IsAuthenticated
+		srv.Mu.Unlock()
 
 		if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" && r.URL.Path != "/api/blocklist" {
 			http.Redirect(w, r, "/login", http.StatusFound)
@@ -69,10 +72,8 @@ func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 
 func (srv *Server) registerRoutes(r *http.ServeMux) {
 	// Handlers
-	r.HandleFunc("/", srv.handleIndex)
 	r.HandleFunc("/login", srv.handleLoginTemplate)
 	r.HandleFunc("/logout", srv.handleLogout)
-	r.HandleFunc("/ping", srv.handlePing)
 
 	// API routes
 	r.HandleFunc("/api/has-password", srv.handleHasPassword)
