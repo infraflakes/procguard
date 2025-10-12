@@ -12,6 +12,7 @@ import (
 	"procguard/api"
 	"procguard/internal/daemon"
 	"procguard/internal/data"
+	"procguard/internal/web"
 	"strings"
 	"syscall"
 	"time"
@@ -25,7 +26,7 @@ func main() {
 			log.Fatalf("Failed to open database: %v", err)
 		}
 		data.NewLogger(db)
-		gui.Run()
+		web.Run()
 		return
 	}
 
@@ -96,7 +97,7 @@ func HandleDefaultStartup() {
 	if err != nil {
 		data.GetLogger().Printf("Error getting executable path: %v", err)
 	}
-	if err := gui.InstallNativeHost(exePath); err != nil {
+	if err := web.InstallNativeHost(exePath); err != nil {
 		data.GetLogger().Printf("Failed to install native messaging host: %v\n", err)
 		// We don't want to block the main application from starting if this fails.
 	}
