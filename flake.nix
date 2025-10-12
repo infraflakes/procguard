@@ -21,6 +21,12 @@
           typescript
           electron_38
         ];
+        shellHook = ''
+          go env -w GOPATH=$HOME/.local/share/go 
+          export GOOS=windows GOARCH=amd64
+          export NPM_CONFIG_PREFIX="$HOME/.local"
+          export PATH="$HOME/.local/bin:$PATH"
+        '';
       };
     };
 }
