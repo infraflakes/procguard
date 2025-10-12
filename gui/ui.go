@@ -1,12 +1,12 @@
 package gui
 
 import (
-	"log"
 	"net/http"
+	"procguard/internal/data"
 	"sync"
 )
 
-func HandleIndex(mu *sync.Mutex, isAuthenticated bool, logger *log.Logger, w http.ResponseWriter, r *http.Request) {
+func HandleIndex(mu *sync.Mutex, isAuthenticated bool, logger data.Logger, w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return

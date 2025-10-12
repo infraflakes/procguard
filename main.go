@@ -3,31 +3,28 @@ package main
 //go:generate go run github.com/akavel/rsrc -manifest procguard.manifest -o rsrc.syso
 
 import (
-	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"procguard/gui"
 	"procguard/internal/api"
 	"procguard/internal/daemon"
-	"procguard/internal/database"
+	"procguard/internal/data"
 	"strings"
 	"syscall"
 	"time"
-
-	"golang.org/x/sys/windows/registry"
-)
-
-const (
-	extensionId = "ilaocldmkhlifnikhinkmiepekpbefoh"
-	hostName    = "com.nixuris.procguard"
 )
 
 func main() {
 	// When launched by Chrome, the first argument is the extension's origin.
 	if len(os.Args) > 1 && strings.HasPrefix(os.Args[1], "chrome-extension://") {
+		db, err := data.OpenDB()
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+		data.NewLogger(db)
 		gui.Run()
 		return
 	}
@@ -49,6 +46,11 @@ func runApi() {
 	const defaultPort = "58141"
 	addr := "127.0.0.1:" + defaultPort
 	fmt.Println("Starting API server on http://" + addr)
+	db, err := data.InitDB()
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	data.NewLogger(db)
 	api.StartWebServer(addr, registerWebRoutes)
 }
 
@@ -61,11 +63,12 @@ func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
 
 func runDaemon() {
 	fmt.Println("Starting ProcGuard daemon...")
-	appLogger := daemon.Get()
-	db, err := database.InitDB()
+	db, err := data.InitDB()
 	if err != nil {
-		appLogger.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
+	data.NewLogger(db)
+	appLogger := data.GetLogger()
 	defer db.Close()
 
 	daemon.Start(appLogger, db)
@@ -75,6 +78,12 @@ func runDaemon() {
 
 // HandleDefaultStartup implements the main startup logic for GUI mode on Windows.
 func HandleDefaultStartup() {
+	db, err := data.InitDB()
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	data.NewLogger(db)
+
 	// The autostart logic has been moved to a user-initiated action in the GUI.
 
 	// Set up the native messaging host using the current executable's path.
@@ -82,10 +91,10 @@ func HandleDefaultStartup() {
 	// This will be improved when a proper installer is built.
 	exePath, err := os.Executable()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error getting executable path:", err)
+		data.GetLogger().Printf("Error getting executable path: %v", err)
 	}
-	if err := installNativeHost(exePath); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to install native messaging host: %v\n", err)
+	if err := gui.InstallNativeHost(exePath); err != nil {
+		data.GetLogger().Printf("Failed to install native messaging host: %v\n", err)
 		// We don't want to block the main application from starting if this fails.
 	}
 
@@ -108,14 +117,14 @@ func HandleDefaultStartup() {
 	cmdApi := exec.Command(exePath, "run-api")
 	cmdApi.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW
 	if err := cmdApi.Start(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error starting API service:", err)
+		data.GetLogger().Printf("Error starting API service: %v", err)
 		return
 	}
 
 	cmdDaemon := exec.Command(exePath, "run-daemon")
 	cmdDaemon.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW
 	if err := cmdDaemon.Start(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error starting daemon service:", err)
+		data.GetLogger().Printf("Error starting daemon service: %v", err)
 		return
 	}
 
@@ -126,81 +135,6 @@ func HandleDefaultStartup() {
 
 func openBrowser(url string) {
 	if err := exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening browser: %v\n", err)
+		data.GetLogger().Printf("Error opening browser: %v\n", err)
 	}
-}
-
-// installNativeHost sets up the native messaging host for Chrome.
-func installNativeHost(exePath string) error {
-	log := daemon.Get()
-	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + hostName
-
-	// Check if the key already exists.
-	k, err := registry.OpenKey(registry.CURRENT_USER, keyPath, registry.QUERY_VALUE)
-	if err == nil {
-		k.Close()
-		log.Println("Native messaging host registry key already exists.")
-		return nil // Key already exists, no action needed.
-	}
-
-	log.Println("Installing native messaging host...")
-
-	// Create the registry key.
-	k, _, err = registry.CreateKey(registry.CURRENT_USER, keyPath, registry.SET_VALUE)
-	if err != nil {
-		log.Printf("Failed to create registry key: %v", err)
-		return fmt.Errorf("failed to create registry key: %w", err)
-	}
-	defer k.Close()
-
-	// Get the user cache directory.
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		log.Printf("Failed to get user cache dir: %v", err)
-		return fmt.Errorf("failed to get user cache dir: %w", err)
-	}
-	appDataDir := filepath.Join(cacheDir, "procguard")
-	configDir := filepath.Join(appDataDir, "config")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		log.Printf("Failed to create config directory: %v", err)
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	// Create the manifest file in the config directory.
-	manifestPath := filepath.Join(configDir, "native-host.json")
-	if err := createManifest(manifestPath, exePath, extensionId); err != nil {
-		log.Printf("Failed to create manifest file: %v", err)
-		return fmt.Errorf("failed to create manifest file: %w", err)
-	}
-
-	// Set the default value of the registry key to the manifest path.
-	if err := k.SetStringValue("", manifestPath); err != nil {
-		log.Printf("Failed to set registry key value: %v", err)
-		return fmt.Errorf("failed to set registry key value: %w", err)
-	}
-
-	log.Println("Native messaging host installed successfully.")
-	return nil
-}
-
-func createManifest(manifestPath, exePath, extensionId string) error {
-	manifest := map[string]interface{}{
-		"name":            hostName,
-		"description":     "ProcGuard native messaging host",
-		"path":            exePath,
-		"type":            "stdio",
-		"allowed_origins": []string{
-			"chrome-extension://" + extensionId + "/",
-		},
-	}
-
-	file, err := os.Create(manifestPath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(manifest)
 }

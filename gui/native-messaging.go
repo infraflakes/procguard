@@ -7,8 +7,7 @@ import (
 	"io"
 	"os"
 	"procguard/internal/blocklist"
-	"procguard/internal/database"
-	"procguard/internal/daemon"
+	"procguard/internal/data"
 	"reflect"
 	"strings"
 	"time"
@@ -28,10 +27,10 @@ type Response struct {
 
 // Run starts the native messaging host.
 func Run() {
-	log := daemon.Get()
+	log := data.GetLogger()
 	log.Println("Native messaging host started")
 
-	db, err := database.OpenDB()
+	db, err := data.OpenDB()
 	if err != nil {
 		log.Fatalf("Native host failed to open database: %v", err)
 	}
@@ -103,12 +102,12 @@ func Run() {
 func writeUrlToDatabase(db *sql.DB, url string) {
 	_, err := db.Exec("INSERT INTO web_events (url, timestamp) VALUES (?, ?)", url, time.Now().Unix())
 	if err != nil {
-		daemon.Get().Printf("Failed to insert web event: %v", err)
+		data.GetLogger().Printf("Failed to insert web event: %v", err)
 	}
 }
 
 func pollWebBlocklist() {
-	log := daemon.Get()
+	log := data.GetLogger()
 	var lastBlocklist []string
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -133,7 +132,7 @@ func pollWebBlocklist() {
 }
 
 func sendMessage(resp Response) {
-	log := daemon.Get()
+	log := data.GetLogger()
 	b, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Error marshalling response: %v", err)

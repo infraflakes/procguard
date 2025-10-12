@@ -2,21 +2,18 @@ package daemon
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 	"os"
 	"procguard/internal/blocklist"
+	"procguard/internal/data"
 	"slices"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/shirou/gopsutil/v3/process"
-	"golang.org/x/sys/windows"
 )
 
 // Start runs the core daemon logic in goroutines.
-func Start(appLogger *log.Logger, db *sql.DB) {
+func Start(appLogger data.Logger, db *sql.DB) {
 	// Goroutine for event-based process logging
 	go runEventLogging(appLogger, db)
 
@@ -24,7 +21,7 @@ func Start(appLogger *log.Logger, db *sql.DB) {
 	go runProcessKiller(appLogger)
 }
 
-func runEventLogging(appLogger *log.Logger, db *sql.DB) {
+func runEventLogging(appLogger data.Logger, db *sql.DB) {
 	// runningProcs stores the PIDs of processes we are currently tracking.
 	runningProcs := make(map[int32]bool)
 	// Initialize the map with currently running processes that should be tracked.
@@ -100,21 +97,21 @@ func initializeRunningProcs(runningProcs map[int32]bool, db *sql.DB) {
 				// This handles cases where the daemon was stopped abruptly.
 				_, err := db.Exec("UPDATE app_events SET end_time = ? WHERE pid = ? AND end_time IS NULL", time.Now().Unix(), pid)
 				if err != nil {
-					Get().Printf("Failed to backfill end_time for pid %d: %v", pid, err)
+					data.GetLogger().Printf("Failed to backfill end_time for pid %d: %v", pid, err)
 				}
 			}
 		}
 	}
 }
 
-func runProcessKiller(appLogger *log.Logger) {
+func runProcessKiller(appLogger data.Logger) {
 	killTick := time.NewTicker(100 * time.Millisecond)
 	defer killTick.Stop()
 	for range killTick.C {
 		list, err := blocklist.LoadApp()
 		if err != nil {
 			// Use the main app logger, not the one passed in, to avoid confusion
-			Get().Printf("failed to fetch blocklist: %v", err)
+			data.GetLogger().Printf("failed to fetch blocklist: %v", err)
 			continue
 		}
 		if len(list) == 0 {
@@ -130,11 +127,12 @@ func runProcessKiller(appLogger *log.Logger) {
 			// Enforce the blocklist by killing any process whose name is in the list.
 			if slices.Contains(list, strings.ToLower(name)) {
 				err := p.Kill()
-									if err != nil {
-										Get().Printf("failed to kill %s (pid %d): %v", name, p.Pid, err)
-									} else {
-										Get().Printf("killed blocked process %s (pid %d)", name, p.Pid)
-									}			}
+				if err != nil {
+					data.GetLogger().Printf("failed to kill %s (pid %d): %v", name, p.Pid, err)
+				} else {
+					data.GetLogger().Printf("killed blocked process %s (pid %d)", name, p.Pid)
+				}
+			}
 		}
 	}
 }
@@ -172,52 +170,4 @@ func shouldLogProcess(p *process.Process) bool {
 	}
 
 	return true
-}
-
-const (
-	// Integrity Level constants
-	SECURITY_MANDATORY_UNTRUSTED_RID         = 0x00000000
-	SECURITY_MANDATORY_LOW_RID               = 0x00001000
-	SECURITY_MANDATORY_MEDIUM_RID            = 0x00002000
-	SECURITY_MANDATORY_HIGH_RID              = 0x00003000
-	SECURITY_MANDATORY_SYSTEM_RID            = 0x00004000
-	SECURITY_MANDATORY_PROTECTED_PROCESS_RID = 0x00005000
-)
-
-// GetProcessIntegrityLevel returns the integrity level of a process.
-func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
-	h, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION, false, pid)
-	if err != nil {
-		// Ignore errors for processes we can't open (e.g., system processes)
-		return 0, nil
-	}
-	defer windows.Close(h)
-
-	var token windows.Token
-	if err := windows.OpenProcessToken(h, windows.TOKEN_QUERY, &token); err != nil {
-		return 0, fmt.Errorf("could not open process token: %w", err)
-	}
-
-	var tokenInfoLen uint32
-	// First call to get the required buffer size. This is expected to fail.
-	windows.GetTokenInformation(token, windows.TokenIntegrityLevel, nil, 0, &tokenInfoLen)
-	if tokenInfoLen == 0 {
-		return 0, fmt.Errorf("GetTokenInformation failed to get buffer size")
-	}
-
-	tokenInfo := make([]byte, tokenInfoLen)
-	if err := windows.GetTokenInformation(token, windows.TokenIntegrityLevel, &tokenInfo[0], tokenInfoLen, &tokenInfoLen); err != nil {
-		return 0, fmt.Errorf("could not get token information: %w", err)
-	}
-
-	til := (*windows.Tokenmandatorylabel)(unsafe.Pointer(&tokenInfo[0]))
-	sid := til.Label.Sid
-
-	// The integrity level is the last sub-authority in the SID.
-	// A SID is structured as: [Revision][SubAuthorityCount][Authority][SubAuthority1]...[SubAuthorityN]
-	// We need to get the address of the last SubAuthority.
-	subAuthorityCount := *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(sid)) + 1))
-	pSubAuthority := uintptr(unsafe.Pointer(sid)) + 8 + (uintptr(subAuthorityCount)-1)*4
-
-	return *(*uint32)(unsafe.Pointer(pSubAuthority)), nil
 }

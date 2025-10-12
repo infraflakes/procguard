@@ -3,17 +3,15 @@ package api
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
-	"procguard/internal/database"
-	"procguard/internal/daemon"
+	"procguard/internal/data"
 	"sync"
 )
 
 // Server holds the dependencies for the GUI server.
 type Server struct {
-	Logger          *log.Logger
+	Logger          data.Logger
 	IsAuthenticated bool
 	Mu              sync.Mutex
 	db              *sql.DB
@@ -21,13 +19,13 @@ type Server struct {
 
 // NewServer creates a new Server with its dependencies.
 func NewServer() (*Server, error) {
-	db, err := database.OpenDB() // Use OpenDB for read-only clients
+	db, err := data.OpenDB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	return &Server{
-		Logger: daemon.Get(),
+		Logger: data.GetLogger(),
 		db:     db,
 	}, nil
 }

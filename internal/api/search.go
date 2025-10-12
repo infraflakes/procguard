@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"procguard/internal/util"
 	"strconv"
 	"strings"
 	"time"
@@ -38,14 +39,14 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 	var err error
 
 	if since != "" {
-		sinceTime, err = parseTime(since)
+		sinceTime, err = util.ParseTime(since)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse 'since' time: %w", err)
 		}
 	}
 
 	if until != "" {
-		untilTime, err = parseTime(until)
+		untilTime, err = util.ParseTime(until)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse 'until' time: %w", err)
 		}

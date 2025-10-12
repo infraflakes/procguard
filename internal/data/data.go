@@ -1,4 +1,4 @@
-package database
+package data
 
 import (
 	"database/sql"
@@ -70,6 +70,15 @@ func createSchema(db *sql.DB) error {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_web_events_timestamp ON web_events (timestamp);
+
+	CREATE TABLE IF NOT EXISTS logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		timestamp INTEGER NOT NULL,
+		level TEXT NOT NULL,
+		message TEXT NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs (timestamp);
 	`
 	_, err := db.Exec(schema)
 	return err
