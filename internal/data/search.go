@@ -54,7 +54,11 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			GetLogger().Printf("Failed to close rows: %v", err)
+		}
+	}()
 
 	var results [][]string
 	for rows.Next() {

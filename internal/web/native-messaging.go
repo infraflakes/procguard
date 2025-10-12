@@ -33,7 +33,11 @@ func Run() {
 	if err != nil {
 		log.Fatalf("Native host failed to open database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Failed to close database: %v", err)
+		}
+	}()
 
 	go pollWebBlocklist()
 

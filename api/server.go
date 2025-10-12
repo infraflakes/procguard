@@ -37,7 +37,11 @@ func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.S
 		fmt.Fprintln(os.Stderr, "Error creating server:", err)
 		os.Exit(1)
 	}
-	defer srv.db.Close()
+	defer func() {
+		if err := srv.db.Close(); err != nil {
+			srv.Logger.Printf("Failed to close database: %v", err)
+		}
+	}()
 
 	r := http.NewServeMux()
 

@@ -42,7 +42,11 @@ func GetWebLogs(db *sql.DB, since, until string) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			GetLogger().Printf("Failed to close rows: %v", err)
+		}
+	}()
 
 	var entries [][]string
 	for rows.Next() {

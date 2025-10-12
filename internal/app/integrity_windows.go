@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"procguard/internal/data"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -24,7 +25,11 @@ func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
 		// Ignore errors for processes we can't open (e.g., system processes)
 		return 0, nil
 	}
-	defer windows.Close(h)
+	defer func() {
+		if err := windows.Close(h); err != nil {
+			data.GetLogger().Printf("Failed to close handle: %v", err)
+		}
+	}()
 
 	var token windows.Token
 	if err := windows.OpenProcessToken(h, windows.TOKEN_QUERY, &token); err != nil {
@@ -33,7 +38,7 @@ func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
 
 	var tokenInfoLen uint32
 	// First call to get the required buffer size. This is expected to fail.
-	windows.GetTokenInformation(token, windows.TokenIntegrityLevel, nil, 0, &tokenInfoLen)
+	_ = windows.GetTokenInformation(token, windows.TokenIntegrityLevel, nil, 0, &tokenInfoLen)
 	if tokenInfoLen == 0 {
 		return 0, fmt.Errorf("GetTokenInformation failed to get buffer size")
 	}
@@ -52,5 +57,6 @@ func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
 	subAuthorityCount := *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(sid)) + 1))
 	pSubAuthority := uintptr(unsafe.Pointer(sid)) + 8 + (uintptr(subAuthorityCount)-1)*4
 
+	//nolint:govet
 	return *(*uint32)(unsafe.Pointer(pSubAuthority)), nil
 }

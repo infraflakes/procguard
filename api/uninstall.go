@@ -40,27 +40,39 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		s.db.Close()
+		if err := s.db.Close(); err != nil {
+			s.Logger.Printf("Failed to close database: %v", err)
+		}
 		time.Sleep(1 * time.Second)
-		killOtherProcGuardProcesses()
+		killOtherProcGuardProcesses(s.Logger)
 		time.Sleep(2 * time.Second) // Give processes time to die
-		unblockAll()
-		daemon.RemoveAutostart()
-		removeNativeHost()
+		if err := unblockAll(); err != nil {
+			s.Logger.Printf("Failed to unblock all files: %v", err)
+		}
+		if err := daemon.RemoveAutostart(); err != nil {
+			s.Logger.Printf("Failed to remove autostart: %v", err)
+		}
+		if err := removeNativeHost(); err != nil {
+			s.Logger.Printf("Failed to remove native host: %v", err)
+		}
 
 		// Remove all application data, logs, and backups from LOCALAPPDATA
 		fmt.Println("Removing all application data...")
 		localAppData := os.Getenv("LOCALAPPDATA")
 		if localAppData != "" {
 			appDataDir := filepath.Join(localAppData, appName)
-			os.RemoveAll(appDataDir)
+			if err := os.RemoveAll(appDataDir); err != nil {
+				s.Logger.Printf("Failed to remove app data directory: %v", err)
+			}
 		}
 
 		// Remove cache directory
 		cacheDir, err := os.UserCacheDir()
 		if err == nil {
 			procguardCacheDir := filepath.Join(cacheDir, "procguard")
-			os.RemoveAll(procguardCacheDir)
+			if err := os.RemoveAll(procguardCacheDir); err != nil {
+				s.Logger.Printf("Failed to remove cache directory: %v", err)
+			}
 		}
 
 		os.Exit(0)
@@ -72,7 +84,7 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func killOtherProcGuardProcesses() {
+func killOtherProcGuardProcesses(logger data.Logger) {
 	currentPid := os.Getpid()
 	procs, err := process.Processes()
 	if err != nil {
@@ -90,7 +102,9 @@ func killOtherProcGuardProcesses() {
 		}
 
 		if strings.HasPrefix(strings.ToLower(name), "procguard") {
-			p.Kill()
+			if err := p.Kill(); err != nil {
+				logger.Printf("Failed to kill process %s: %v", name, err)
+			}
 		}
 	}
 }
@@ -104,7 +118,10 @@ func unblockAll() error {
 	for _, name := range list {
 		if strings.HasSuffix(name, ".blocked") {
 			newName := strings.TrimSuffix(name, ".blocked")
-			os.Rename(name, newName)
+			if err := os.Rename(name, newName); err != nil {
+				// Log the error but continue trying to unblock other files
+				data.GetLogger().Printf("Failed to unblock file %s: %v", name, err)
+			}
 		}
 	}
 

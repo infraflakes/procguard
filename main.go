@@ -73,7 +73,11 @@ func runDaemon() {
 	}
 	data.NewLogger(db)
 	appLogger := data.GetLogger()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			appLogger.Printf("Failed to close database: %v", err)
+		}
+	}()
 
 	daemon.Start(appLogger, db)
 	// Keep the main goroutine alive

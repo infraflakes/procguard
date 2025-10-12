@@ -74,7 +74,11 @@ func initializeRunningProcs(runningProcs map[int32]bool, db *sql.DB) {
 	if err != nil {
 		return
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close rows: %v", err)
+		}
+	}()
 
 	for rows.Next() {
 		var pid int32

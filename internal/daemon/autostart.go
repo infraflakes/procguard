@@ -1,5 +1,3 @@
-//go:build windows
-
 package daemon
 
 import (
@@ -26,7 +24,11 @@ func EnsureAutostart() (string, error) {
 	if err != nil {
 		return destPath, fmt.Errorf("failed to open Run registry key: %w", err)
 	}
-	defer key.Close()
+	defer func() {
+		if err := key.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close registry key: %v", err)
+		}
+	}()
 
 	// Check if the value already exists and is correct.
 	currentPath, _, err := key.GetStringValue(appName)
@@ -66,7 +68,11 @@ func RemoveAutostart() error {
 		}
 		return err
 	}
-	defer key.Close()
+	defer func() {
+		if err := key.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close registry key: %v", err)
+		}
+	}()
 
 	// Delete the value. If it doesn't exist, this will return an error that we can ignore.
 	if err := key.DeleteValue(appName); err != nil && err != registry.ErrNotExist {
@@ -115,13 +121,21 @@ func copyExecutableToAppData() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error opening source executable: %w", err)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		if err := sourceFile.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close source file: %v", err)
+		}
+	}()
 
 	destFile, err := os.Create(destPath)
 	if err != nil {
 		return "", fmt.Errorf("error creating destination executable: %w", err)
 	}
-	defer destFile.Close()
+	defer func() {
+		if err := destFile.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close destination file: %v", err)
+		}
+	}()
 
 	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {

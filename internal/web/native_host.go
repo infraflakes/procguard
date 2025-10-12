@@ -24,7 +24,9 @@ func InstallNativeHost(exePath string) error {
 	// Check if the key already exists.
 	k, err := registry.OpenKey(registry.CURRENT_USER, keyPath, registry.QUERY_VALUE)
 	if err == nil {
-		k.Close()
+		if err := k.Close(); err != nil {
+			log.Printf("Failed to close registry key: %v", err)
+		}
 		log.Println("Native messaging host registry key already exists.")
 		return nil // Key already exists, no action needed.
 	}
@@ -37,7 +39,11 @@ func InstallNativeHost(exePath string) error {
 		log.Printf("Failed to create registry key: %v", err)
 		return fmt.Errorf("failed to create registry key: %w", err)
 	}
-	defer k.Close()
+	defer func() {
+		if err := k.Close(); err != nil {
+			log.Printf("Failed to close registry key: %v", err)
+		}
+	}()
 
 	// Get the user cache directory.
 	cacheDir, err := os.UserCacheDir()
@@ -84,7 +90,11 @@ func CreateManifest(manifestPath, exePath, extensionId string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close file: %v", err)
+		}
+	}()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
