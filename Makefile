@@ -25,6 +25,7 @@ LDFLAGS = -ldflags="-s -w -X main.version=$(VERSION)"
 all: build
 
 build:
+	mkdir -p build/cache build/bin
 	@echo "Generating Windows resources..."
 	go generate ./...
 	@echo "Building ProcGuardSvc.exe for windows..."
@@ -43,8 +44,8 @@ test:
 clean:
 	@echo "Cleaning..."
 	$(GO_CLEAN)
-	rm -rf build/cache/rsrc.syso
-	rm -rf build/bin/$(BINARY_WINDOWS_NAME)
+	rm -rf build/cache
+	rm -rf build/bin
 
 install:
 	@echo "Installing $(BINARY_NAME) to $(shell $(GO_CMD) env GOPATH)/bin..."
