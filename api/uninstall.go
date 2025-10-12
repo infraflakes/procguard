@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"procguard/internal/auth"
 	"procguard/internal/data"
 	"procguard/internal/daemon"
 	"strings"
@@ -33,7 +34,7 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !CheckPasswordHash(req.Password, cfg.PasswordHash) {
+	if !auth.CheckPasswordHash(req.Password, cfg.PasswordHash) {
 		http.Error(w, "Invalid password", http.StatusUnauthorized)
 		return
 	}

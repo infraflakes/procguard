@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"procguard/internal/auth"
 	"procguard/internal/data"
 )
 
@@ -40,7 +41,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CheckPasswordHash(req.Password, cfg.PasswordHash) {
+	if auth.CheckPasswordHash(req.Password, cfg.PasswordHash) {
 		s.Mu.Lock()
 		s.IsAuthenticated = true
 		s.Mu.Unlock()
@@ -74,7 +75,7 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := HashPassword(req.Password)
+	hash, err := auth.HashPassword(req.Password)
 	if err != nil {
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
 		return
