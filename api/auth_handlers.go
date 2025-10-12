@@ -3,16 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/internal/config"
-	"procguard/gui"
+	"procguard/internal/data"
 )
-
-func (s *Server) handleLoginTemplate(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if _, err := w.Write(gui.LoginHTML); err != nil {
-		s.Logger.Printf("Error writing response: %v", err)
-	}
-}
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	s.Mu.Lock()
@@ -22,7 +14,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleHasPassword(w http.ResponseWriter, r *http.Request) {
-	cfg, err := config.Load()
+	cfg, err := data.LoadConfig()
 	if err != nil {
 		http.Error(w, "Failed to load config", http.StatusInternalServerError)
 		return
@@ -42,7 +34,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg, err := config.Load()
+	cfg, err := data.LoadConfig()
 	if err != nil {
 		http.Error(w, "Failed to load config", http.StatusInternalServerError)
 		return
@@ -71,7 +63,7 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg, err := config.Load()
+	cfg, err := data.LoadConfig()
 	if err != nil {
 		http.Error(w, "Failed to load config", http.StatusInternalServerError)
 		return

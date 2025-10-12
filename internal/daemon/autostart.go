@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"procguard/internal/config"
+	"procguard/internal/data"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -42,7 +42,7 @@ func EnsureAutostart() (string, error) {
 	}
 
 	// Update the config file to reflect the change
-	cfg, err := config.Load()
+	cfg, err := data.LoadConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
 	} else {
@@ -74,7 +74,7 @@ func RemoveAutostart() error {
 	}
 
 	// Update the config file to reflect the change
-	cfg, err := config.Load()
+	cfg, err := data.LoadConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
 	} else {

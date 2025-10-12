@@ -3,7 +3,6 @@ package daemon
 import (
 	"database/sql"
 	"os"
-	"procguard/internal/blocklist"
 	"procguard/internal/data"
 	"slices"
 	"strings"
@@ -108,7 +107,7 @@ func runProcessKiller(appLogger data.Logger) {
 	killTick := time.NewTicker(100 * time.Millisecond)
 	defer killTick.Stop()
 	for range killTick.C {
-		list, err := blocklist.LoadApp()
+		list, err := data.LoadApp()
 		if err != nil {
 			// Use the main app logger, not the one passed in, to avoid confusion
 			data.GetLogger().Printf("failed to fetch blocklist: %v", err)

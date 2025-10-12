@@ -29,3 +29,10 @@ func HandlePing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func HandleLoginTemplate(logger data.Logger, w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if _, err := w.Write(LoginHTML); err != nil {
+		logger.Printf("Error writing response: %v", err)
+	}
+}
+

@@ -5,12 +5,12 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/internal/config"
+	"procguard/internal/data"
 	"procguard/internal/daemon"
 )
 
 func (s *Server) handleGetAutostartStatus(w http.ResponseWriter, r *http.Request) {
-	cfg, err := config.Load()
+	cfg, err := data.LoadConfig()
 	if err != nil {
 		http.Error(w, "Failed to load config", http.StatusInternalServerError)
 		return

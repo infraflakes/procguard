@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"procguard/internal/config"
+	"procguard/internal/data"
 	"procguard/internal/daemon"
-	"procguard/internal/blocklist"
 	"strings"
 	"time"
 
@@ -28,7 +27,7 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg, err := config.Load()
+	cfg, err := data.LoadConfig()
 	if err != nil {
 		http.Error(w, "Failed to load config", http.StatusInternalServerError)
 		return
@@ -96,7 +95,7 @@ func killOtherProcGuardProcesses() {
 }
 
 func unblockAll() error {
-	list, err := blocklist.LoadApp()
+	list, err := data.LoadApp()
 	if err != nil {
 		return fmt.Errorf("could not load blocklist: %w", err)
 	}

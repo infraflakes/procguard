@@ -1,4 +1,4 @@
-package blocklist
+package data
 
 import (
 	"encoding/json"

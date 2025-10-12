@@ -1,4 +1,4 @@
-package config
+package data
 
 import (
 	"encoding/json"
@@ -15,8 +15,8 @@ type Config struct {
 	PasswordHash string `json:"password_hash,omitempty"`
 }
 
-// New creates a new Config with default values.
-func New() *Config {
+// NewConfig creates a new Config with default values.
+func NewConfig() *Config {
 	return &Config{}
 }
 
@@ -29,9 +29,9 @@ func GetConfigPath() (string, error) {
 	return filepath.Join(cacheDir, "procguard", "config", "settings.json"), nil
 }
 
-// Load reads the configuration file from the user's cache directory.
+// LoadConfig reads the configuration file from the user's cache directory.
 // If the file doesn't exist, it returns a default configuration.
-func Load() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	path, err := GetConfigPath()
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func Load() (*Config, error) {
 	content, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		// If the config file doesn't exist, create a new one with default values.
-		return New(), nil
+		return NewConfig(), nil
 	}
 	if err != nil {
 		return nil, err

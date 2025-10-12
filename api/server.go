@@ -70,7 +70,6 @@ func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 
 func (srv *Server) registerRoutes(r *http.ServeMux) {
 	// Handlers
-	r.HandleFunc("/login", srv.handleLoginTemplate)
 	r.HandleFunc("/logout", srv.handleLogout)
 
 	// API routes

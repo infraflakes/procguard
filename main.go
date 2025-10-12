@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"procguard/gui"
-	"procguard/internal/api"
+	"procguard/api"
 	"procguard/internal/daemon"
 	"procguard/internal/data"
 	"strings"
@@ -57,6 +57,9 @@ func runApi() {
 func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		gui.HandleIndex(&srv.Mu, srv.IsAuthenticated, srv.Logger, w, r)
+	})
+	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		gui.HandleLoginTemplate(srv.Logger, w, r)
 	})
 	r.HandleFunc("/ping", gui.HandlePing)
 }
