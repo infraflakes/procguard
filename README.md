@@ -1,75 +1,37 @@
 # ProcGuard
 
-ProcGuard is a cross-platform tool for monitoring and controlling processes on your system. It is composed of three main components: a daemon, an API server with a web-based GUI, and a command-line interface (CLI).
+ProcGuard is a Windows-based tool for monitoring and controlling processes and web activity on your system. It is composed of a daemon that runs in the background, an API server with a web-based GUI, and a browser extension for web monitoring.
+
+## Features
+
+- **Process Monitoring:** Logs all running processes and their activity.
+- **Application Blocking:** Block any application from running.
+- **Web Activity Monitoring:** Logs all visited websites.
+- **Website Blocking:** Block any website from being accessed.
+- **Web-based GUI:** A simple and intuitive web interface to view logs and manage blocklists.
+- **Browser Extension:** A Chrome extension for web monitoring and blocking.
+
+## Dependencies
+
+To build and run ProcGuard, you will need:
+
+- **Go:** The programming language used for the backend.
+- **`golangci-lint`:** (Optional) For running linters and ensuring code quality.
+
+## Build Guide
+
+To build the application, you can use the provided `Makefile`:
+
+```bash
+make build
+```
+
+This will generate the main executable `ProcGuardSvc.exe` in the `build/bin` directory.
 
 ## Usage
 
-ProcGuard is designed as a modular system. You run the services you need (the API server and the daemon) and then interact with them through the web GUI or the CLI.
+To run the application, simply execute the `ProcGuardSvc.exe` file located in the `build/bin` directory. This will start the background daemon and the API server.
 
-### 1. Running the Services
+The web GUI will be available at `http://127.0.0.1:58141`.
 
-You need to run the `api` and `daemon` services in separate terminal windows.
-
-**To run the API server (which includes the web GUI):**
-
-```bash
-procguard run api
-```
-
-This will start the server, and you can access the GUI by navigating to `http://127.0.0.1:58141` in your web browser.
-
-**To run the background daemon:**
-
-```bash
-procguard run daemon
-```
-
-This will start the background process that monitors and blocks applications based on the blocklist provided by the API service.
-
-### 2. Using the Web GUI
-
-Once the `api` service is running, you can open your browser to `http://127.0.0.1:58141` to access the GUI.
-
-**GUI Features:**
-- **Search:** Search the process logs for specific application names.
-- **Blocklist Management:** View all currently blocked applications, add new ones, and unblock them.
-
-### 3. Using the CLI
-
-The `procguard` command-line tool allows you to interact with the system from your terminal. It communicates with the `api` service, so make sure the API server is running before using these commands.
-
-#### `procguard find <name>`
-Search the process log for a specific program name.
-
-#### `procguard block`
-Manage the process blocklist.
-- `procguard block add <name>`: Add a program to the blocklist.
-- `procguard block rm <name>`: Remove a program from the blocklist.
-- `procguard block list`: Show the current blocklist.
-- `procguard block clear`: Clear the entire blocklist.
-- `procguard block save <file>`: Save the current blocklist to a file.
-- `procguard block load <file>`: Load a blocklist from a file.
-
-#### `procguard systemd` (Linux only)
-Manage the systemd user service for the ProcGuard daemon.
-- `procguard systemd install`: Install and enable the systemd user service.
-- `procguard systemd remove`: Disable and remove the systemd user service.
-
-## Platform-Specific Behavior
-
--   **Automatic Setup (Windows):** On its first launch, ProcGuard will automatically create an entry in the Windows Task Scheduler to ensure the daemon runs on logon.
--   **Persistent Service (Linux):** For similar persistent behavior on Linux, use the `procguard systemd install` command.
--   **File Blocking:**
-    -   On **Windows**, blocking an executable renames it to have a `.blocked` extension.
-    -   On **Linux/macOS**, blocking an executable removes its execute permission.
-
-## Configuration
-
-ProcGuard uses a configuration file located at `~/.cache/procguard/spec.json`. As of the latest version, this file's primary role is to track the state of the systemd service on Linux:
-
-```json
-{
-  "systemd_installed": false
-}
-```
-Other features, such as the Windows autostart task, are now handled automatically by the application and do not require manual configuration.
+To install the browser extension, you will need to load it manually in Chrome from the `extension` directory.
