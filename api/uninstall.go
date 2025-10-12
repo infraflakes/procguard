@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"procguard/internal/auth"
-	"procguard/internal/data"
 	"procguard/internal/daemon"
+	"procguard/internal/data"
 	"strings"
 	"time"
 

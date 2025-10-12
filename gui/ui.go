@@ -35,4 +35,3 @@ func HandleLoginTemplate(logger data.Logger, w http.ResponseWriter, r *http.Requ
 		logger.Printf("Error writing response: %v", err)
 	}
 }
-

@@ -1,0 +1,47 @@
+name: Go Lint and Format Check
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22' # Specify your Go version
+
+      - name: Run gofmt check
+        run: |
+          echo "Checking Go code formatting with gofmt..."
+          UNFORMATTED_FILES=$(gofmt -l .)
+          if [ -n "$UNFORMATTED_FILES" ]; then
+            echo "The following Go files are not formatted correctly:"
+            echo "$UNFORMATTED_FILES"
+            echo "Please run 'gofmt -w .' to fix them."
+            exit 1
+          else
+            echo "All Go files are correctly formatted."
+          fi
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.1 # Specify a version
+
+      - name: Run golangci-lint
+        env:
+          GOOS: windows
+        run: |
+          echo "Running golangci-lint..."
+          golangci-lint run ./...

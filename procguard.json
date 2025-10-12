@@ -1,9 +1,0 @@
-{
-  "name": "com.nixuris.procguard",
-  "description": "ProcGuard native messaging host",
-  "path": "__PROCGUARD_PATH__",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://__EXTENSION_ID__/"
-  ]
-}

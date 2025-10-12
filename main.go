@@ -1,6 +1,6 @@
 package main
 
-//go:generate go run github.com/akavel/rsrc -manifest procguard.manifest -o rsrc.syso
+//go:generate go run github.com/akavel/rsrc -manifest build/procguard.manifest -o build/cache/rsrc.syso
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"procguard/gui"
 	"procguard/api"
+	"procguard/gui"
 	"procguard/internal/daemon"
 	"procguard/internal/data"
 	"procguard/internal/web"
