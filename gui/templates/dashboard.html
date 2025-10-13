@@ -26,102 +26,10 @@
     <button onclick="window.location.href='/logout'" style="float: right;">Đăng xuất</button>
   </nav>
 
-  <div id="welcome-view">
-    <h2>Chào mừng đến với ProcGuard</h2>
-    <p>Chọn một mục để bắt đầu:</p>
-    <button class="big-button" onclick="showTopLevelView('app-management-view')">Quản lý Ứng dụng</button>
-    <button class="big-button" onclick="showTopLevelView('web-management-view')">Quản lý Web</button>
-  </div>
-
-  <div id="app-management-view" style="display:none;">
-    <div class="sub-nav">
-      <button onclick="showSubView('search-view', 'app-management-view')">Tìm kiếm</button>
-      <button onclick="showSubView('blocklist-view', 'app-management-view')">Xem ứng dụng bị chặn</button>
-    </div>
-    <div id="search-view">
-      <h2>Bảng điều khiển ProcGuard</h2>
-      <div id="search-container">
-        <input id="q" placeholder="nhập tên ứng dụng">
-        <button onclick="search()">Tìm kiếm Log</button>
-        <button onclick="block()">Chặn mục đã chọn</button>
-        <span id="block-status" class="status-message"></span>
-      </div>
-      <div id="time-filter-container">
-          <span>Lọc theo thời gian:</span>
-          <button onclick="search({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
-          <button onclick="search({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
-          <button onclick="search({since: '7 days ago', until: 'now'})">7 ngày qua</button>
-          <br>
-          <span>Từ: </span><input type="date" id="since_date"> <input type="time" id="since_time" step="60">
-          <span>Đến: </span><input type="date" id="until_date"> <input type="time" id="until_time" step="60">
-          <button onclick="search()">Xác nhận</button>
-      </div>
-      <h3>Kết quả tìm kiếm</h3>
-      <div id="results"></div>
-    </div>
-    <div id="blocklist-view" style="display:none;">
-      <h2>Các ứng dụng bị chặn</h2>
-      <div id="blocklist-controls">
-          <button onclick="unblockSelected()">Bỏ chặn mục đã chọn</button>
-          <button onclick="clearBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
-          <button onclick="saveBlocklist()">Lưu danh sách chặn</button>
-          <button onclick="document.getElementById('load-input').click()">Tải lên danh sách chặn</button>
-          <input type="file" id="load-input" style="display: none;" onchange="loadBlocklistFile(event)">
-          <span id="unblock-status" class="status-message"></span>
-      </div>
-      <div id="blocklist-items"></div>
-    </div>
-  </div>
-
-  <div id="web-management-view" style="display:none;">
-    <div class="sub-nav">
-      <button onclick="showSubView('web-log-view', 'web-management-view')">Lịch sử Web</button>
-      <button onclick="showSubView('web-blocklist-view', 'web-management-view')">Danh sách chặn</button>
-    </div>
-    <div id="web-log-view" style="display:none;">
-      <h2>Lịch sử Truy cập Web</h2>
-      <div id="web-log-controls">
-        <button onclick="blockSelectedWebsites()">Chặn mục đã chọn</button>
-      </div>
-      <div id="web-time-filter-container">
-          <span>Lọc theo thời gian:</span>
-          <button onclick="searchWebLogs({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
-          <button onclick="searchWebLogs({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
-          <button onclick="searchWebLogs({since: '7 days ago', until: 'now'})">7 ngày qua</button>
-          <br>
-          <span>Từ: </span><input type="date" id="web_since_date"> <input type="time" id="web_since_time" step="60">
-          <span>Đến: </span><input type="date" id="web_until_date"> <input type="time" id="web_until_time" step="60">
-          <button onclick="searchWebLogs()">Xác nhận</button>
-      </div>
-      <div id="web-log-items"></div>
-    </div>
-    <div id="web-blocklist-view" style="display:none;">
-      <h2>Quản lý Danh sách chặn Web</h2>
-      <div id="web-blocklist-controls">
-          <button onclick="unblockSelectedWebsites()">Bỏ chặn mục đã chọn</button>
-          <button onclick="clearWebBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
-          <button onclick="saveWebBlocklist()">Lưu danh sách chặn</button>
-          <button onclick="document.getElementById('load-web-input').click()">Tải lên danh sách chặn</button>
-          <input type="file" id="load-web-input" style="display: none;" onchange="loadWebBlocklistFile(event)">
-          <span id="unblock-web-status" class="status-message"></span>
-      </div>
-      <div id="web-blocklist-items"></div>
-    </div>
-  </div>
-
-  <div id="settings-view" style="display:none;">
-    <h2>Cài đặt</h2>
-    <div id="settings-controls">
-        <div id="autostart-settings">
-            <h4>Khởi động cùng Windows</h4>
-            <p>Trạng thái: <b id="autostart-status">Không rõ</b></p>
-            <button id="autostart-toggle-btn" onclick="toggleAutostart()">Toggle</button>
-        </div>
-        <hr>
-        <button onclick="uninstall()" style="background-color: #d9534f;">Gỡ cài đặt ProcGuard</button>
-        <p><b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt ProcGuard khỏi hệ thống.</p>
-    </div>
-  </div>
+  {{template "welcome.html" .}}
+  {{template "app_management.html" .}}
+  {{template "web_management.html" .}}
+  {{template "settings.html" .}}
 
   <div id="uninstall-modal" class="modal" style="display: none;">
     <div class="modal-content">

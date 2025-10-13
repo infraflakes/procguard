@@ -20,8 +20,8 @@ func HandleIndex(mu *sync.Mutex, isAuthenticated bool, logger data.Logger, w htt
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if _, err := w.Write(DashboardHTML); err != nil {
-		logger.Printf("Error writing response: %v", err)
+	if err := Templates.ExecuteTemplate(w, "dashboard.html", nil); err != nil {
+		logger.Printf("Error executing dashboard template: %v", err)
 	}
 }
 
@@ -31,7 +31,7 @@ func HandlePing(w http.ResponseWriter, r *http.Request) {
 
 func HandleLoginTemplate(logger data.Logger, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if _, err := w.Write(LoginHTML); err != nil {
-		logger.Printf("Error writing response: %v", err)
+	if err := Templates.ExecuteTemplate(w, "login.html", nil); err != nil {
+		logger.Printf("Error executing login template: %v", err)
 	}
 }
