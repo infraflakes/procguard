@@ -64,7 +64,9 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
         } catch (e) {
           // Ignore invalid URLs
         }
-        return `<div class="result-item"><input type="checkbox" name="web-log-domain" value="${domain}"> ${l.join(' | ')}</div>`;
+        return `<div class="result-item"><input type="checkbox" name="web-log-domain" value="${domain}"> ${l.join(
+          ' | '
+        )}</div>`;
       })
       .join('');
   } else {

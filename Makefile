@@ -41,6 +41,7 @@ run:
 fmt:
 	@echo "Formatting code..."
 	$(GO_FMT) ./...
+	cd gui/frontend && npm run format
 
 test:
 	$(GO_TEST) ./...

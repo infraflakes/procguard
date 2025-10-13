@@ -40,5 +40,19 @@ jobs:
           echo "Running golangci-lint..."
           golangci-lint run ./...
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        run: cd gui/frontend && npm install
+
+      - name: Run frontend linter
+        run: cd gui/frontend && npm run lint
+
+      - name: Run frontend formatter check
+        run: cd gui/frontend && npm run format-check
+
       - name: Build
         run: make build

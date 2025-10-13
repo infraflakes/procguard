@@ -42,7 +42,9 @@ async function search(range?: { since: string; until: string }): Promise<void> {
     results.innerHTML = data
       .map((l: string[]) => {
         const processName = l[1];
-        return `<div class="result-item"><input type="checkbox" name="search-result-app" value="${processName}"> ${l.join(' | ')}</div>`;
+        return `<div class="result-item"><input type="checkbox" name="search-result-app" value="${processName}"> ${l.join(
+          ' | '
+        )}</div>`;
       })
       .join('');
   } else {
