@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -56,6 +57,8 @@ func runApi() {
 }
 
 func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
+	assetsFS, _ := fs.Sub(gui.FrontendFS, "frontend/assets")
+	r.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assetsFS))))
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		gui.HandleIndex(&srv.Mu, srv.IsAuthenticated, srv.Logger, w, r)
 	})

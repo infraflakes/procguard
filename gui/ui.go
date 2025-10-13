@@ -20,7 +20,7 @@ func HandleIndex(mu *sync.Mutex, isAuthenticated bool, logger data.Logger, w htt
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := Templates.ExecuteTemplate(w, "dashboard.html", nil); err != nil {
+	if err := Templates.ExecuteTemplate(w, "index.html", nil); err != nil {
 		logger.Printf("Error executing dashboard template: %v", err)
 	}
 }

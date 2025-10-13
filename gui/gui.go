@@ -6,24 +6,15 @@ import (
 	"io/fs"
 )
 
-//go:embed templates
-var templatesFS embed.FS
+//go:embed frontend
+var FrontendFS embed.FS
 
-var (
-	Templates *template.Template
-	LoginHTML []byte
-)
+var Templates *template.Template
 
 func init() {
-	// We need to strip the 'templates' prefix from the path for the template names.
-	fs, err := fs.Sub(templatesFS, "templates")
+	fs, err := fs.Sub(FrontendFS, "frontend")
 	if err != nil {
 		panic(err)
 	}
-	Templates = template.Must(template.ParseFS(fs, "*.html"))
-
-	LoginHTML, err = templatesFS.ReadFile("templates/login.html")
-	if err != nil {
-		panic(err)
-	}
+	Templates = template.Must(template.ParseFS(fs, "*.html", "*/*.html"))
 }
