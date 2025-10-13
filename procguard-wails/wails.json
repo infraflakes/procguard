@@ -1,0 +1,17 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "procguard-wails",
+  "outputfilename": "procguard-wails",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "nixuris",
+    "email": "nixuriss@proton.me"
+  },
+  "windows": {
+    "manifest": "build/procguard.manifest",
+    "versioninfo": "build/versioninfo.json"
+  }
+}
