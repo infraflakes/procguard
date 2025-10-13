@@ -29,17 +29,6 @@ jobs:
             echo "All Go files are correctly formatted."
           fi
 
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
-
-      - name: Run golangci-lint
-        env:
-          GOOS: windows
-        run: |
-          echo "Running golangci-lint..."
-          golangci-lint run ./...
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -53,6 +42,17 @@ jobs:
 
       - name: Run frontend formatter check
         run: cd gui/frontend && npm run format-check
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
+
+      - name: Run golangci-lint
+        env:
+          GOOS: windows
+        run: |
+          echo "Running golangci-lint..."
+          golangci-lint run ./...
 
       - name: Build
         run: make build
