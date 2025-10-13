@@ -1,4 +1,9 @@
-const topLevelViews: string[] = ['welcome-view', 'app-management-view', 'web-management-view', 'settings-view'];
+const topLevelViews: string[] = [
+  'welcome-view',
+  'app-management-view',
+  'web-management-view',
+  'settings-view',
+];
 const appSubViews: string[] = ['search-view', 'blocklist-view'];
 const webSubViews: string[] = ['web-log-view', 'web-blocklist-view'];
 
@@ -7,59 +12,76 @@ declare function loadBlocklist(): void;
 declare function loadWebBlocklist(): void;
 declare function loadWebLogs(): void;
 
-const sinceDateInput = document.getElementById('since_date') as HTMLInputElement;
-const untilDateInput = document.getElementById('until_date') as HTMLInputElement;
-const webSinceDateInput = document.getElementById('web_since_date') as HTMLInputElement;
-const webUntilDateInput = document.getElementById('web_until_date') as HTMLInputElement;
-const extensionStatus = document.getElementById('extension-status') as HTMLSpanElement;
-const installExtensionBtn = document.getElementById('install-extension-btn') as HTMLButtonElement;
+const sinceDateInput = document.getElementById(
+  'since_date'
+) as HTMLInputElement;
+const untilDateInput = document.getElementById(
+  'until_date'
+) as HTMLInputElement;
+const webSinceDateInput = document.getElementById(
+  'web_since_date'
+) as HTMLInputElement;
+const webUntilDateInput = document.getElementById(
+  'web_until_date'
+) as HTMLInputElement;
+const extensionStatus = document.getElementById(
+  'extension-status'
+) as HTMLSpanElement;
+const installExtensionBtn = document.getElementById(
+  'install-extension-btn'
+) as HTMLButtonElement;
 const EXTENSION_ID = 'ilaocldmkhlifnikhinkmiepekpbefoh';
 
 function setDefaults(): void {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const today = `${year}-${month}-${day}`;
-    if (sinceDateInput) sinceDateInput.value = today;
-    if (untilDateInput) untilDateInput.value = today;
-    if (webSinceDateInput) webSinceDateInput.value = today;
-    if (webUntilDateInput) webUntilDateInput.value = today;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const today = `${year}-${month}-${day}`;
+  if (sinceDateInput) sinceDateInput.value = today;
+  if (untilDateInput) untilDateInput.value = today;
+  if (webSinceDateInput) webSinceDateInput.value = today;
+  if (webUntilDateInput) webUntilDateInput.value = today;
 }
 
 function checkExtension(): void {
   if (typeof chrome !== 'undefined' && chrome.runtime) {
-    chrome.runtime.sendMessage(EXTENSION_ID, { message: 'is_installed' }, (response) => {
-      if (chrome.runtime.lastError) {
-        if(extensionStatus) extensionStatus.textContent = 'Chưa cài đặt';
-        if(installExtensionBtn) installExtensionBtn.style.display = 'block';
-      } else {
-        if (response && extensionStatus) {
+    chrome.runtime.sendMessage(
+      EXTENSION_ID,
+      { message: 'is_installed' },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          if (extensionStatus) extensionStatus.textContent = 'Chưa cài đặt';
+          if (installExtensionBtn) installExtensionBtn.style.display = 'block';
+        } else {
+          if (response && extensionStatus) {
             extensionStatus.textContent = `Đã cài đặt (v${response.version})`;
+          }
+          if (installExtensionBtn) installExtensionBtn.style.display = 'none';
         }
-        if(installExtensionBtn) installExtensionBtn.style.display = 'none';
       }
-    });
+    );
   } else {
-    if(extensionStatus) extensionStatus.textContent = 'Không phải trình duyệt dựa trên Chrome';
+    if (extensionStatus)
+      extensionStatus.textContent = 'Không phải trình duyệt dựa trên Chrome';
   }
 }
 
 function showTopLevelView(viewName: string): void {
-    topLevelViews.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
-    const el = document.getElementById(viewName);
-    if (el) el.style.display = 'block';
+  topLevelViews.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const el = document.getElementById(viewName);
+  if (el) el.style.display = 'block';
 
-    if (viewName === 'app-management-view') {
-      showSubView('search-view', 'app-management-view');
-    } else if (viewName === 'web-management-view') {
-      showSubView('web-log-view', 'web-management-view');
-    } else if (viewName === 'settings-view') {
-      loadAutostartStatus();
-    }
+  if (viewName === 'app-management-view') {
+    showSubView('search-view', 'app-management-view');
+  } else if (viewName === 'web-management-view') {
+    showSubView('web-log-view', 'web-management-view');
+  } else if (viewName === 'settings-view') {
+    loadAutostartStatus();
+  }
 }
 
 function showSubView(viewName: string, parentView: string): void {
@@ -72,7 +94,7 @@ function showSubView(viewName: string, parentView: string): void {
     return;
   }
 
-  subviews.forEach(id => {
+  subviews.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -80,16 +102,16 @@ function showSubView(viewName: string, parentView: string): void {
   if (el) el.style.display = 'block';
 
   if (viewName === 'blocklist-view') {
-      loadBlocklist();
+    loadBlocklist();
   } else if (viewName === 'web-blocklist-view') {
-      loadWebBlocklist();
+    loadWebBlocklist();
   } else if (viewName === 'web-log-view') {
-      loadWebLogs();
+    loadWebLogs();
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    setDefaults();
-    showTopLevelView('welcome-view');
-    checkExtension();
+  setDefaults();
+  showTopLevelView('welcome-view');
+  checkExtension();
 });

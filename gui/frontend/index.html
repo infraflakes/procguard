@@ -1,38 +1,45 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Bảng điều khiển ProcGuard</title>
-  <link rel="stylesheet" href="/assets/css/style.css">
-</head>
-<body>
-  <nav>
-    <button onclick="showTopLevelView('welcome-view')">Trang chủ</button>
-    <button onclick="showTopLevelView('settings-view')">Cài đặt</button>
-    <button onclick="window.location.href='/logout'" style="float: right;">Đăng xuất</button>
-  </nav>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bảng điều khiển ProcGuard</title>
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+  <body>
+    <nav>
+      <button onclick="showTopLevelView('welcome-view')">Trang chủ</button>
+      <button onclick="showTopLevelView('settings-view')">Cài đặt</button>
+      <button onclick="window.location.href='/logout'" style="float: right">
+        Đăng xuất
+      </button>
+    </nav>
 
-  {{template "welcome/index.html" .}}
-  {{template "app/index.html" .}}
-  {{template "web/index.html" .}}
-  {{template "settings/index.html" .}}
+    {{template "welcome/index.html" .}} {{template "app/index.html" .}}
+    {{template "web/index.html" .}} {{template "settings/index.html" .}}
 
-  <div id="uninstall-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <span class="close-button" onclick="closeUninstallModal()">&times;</span>
-      <h3>Xác nhận gỡ cài đặt</h3>
-      <p>Vui lòng nhập mật khẩu của bạn để tiếp tục.</p>
-      <form id="uninstall-form">
-        <input type="password" id="uninstall-password" placeholder="Mật khẩu" required>
-        <button type="submit">Xác nhận</button>
-      </form>
-      <p id="uninstall-error" class="error-message" style="display: none;"></p>
+    <div id="uninstall-modal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="close-button" onclick="closeUninstallModal()"
+          >&times;</span
+        >
+        <h3>Xác nhận gỡ cài đặt</h3>
+        <p>Vui lòng nhập mật khẩu của bạn để tiếp tục.</p>
+        <form id="uninstall-form">
+          <input
+            type="password"
+            id="uninstall-password"
+            placeholder="Mật khẩu"
+            required
+          />
+          <button type="submit">Xác nhận</button>
+        </form>
+        <p id="uninstall-error" class="error-message" style="display: none"></p>
+      </div>
     </div>
-  </div>
 
-  <script src="/assets/js/dist/main.js"></script>
-  <script src="/assets/js/dist/app.js"></script>
-  <script src="/assets/js/dist/web.js"></script>
-  <script src="/assets/js/dist/settings.js"></script>
-</body>
+    <script src="/assets/js/dist/main.js"></script>
+    <script src="/assets/js/dist/app.js"></script>
+    <script src="/assets/js/dist/web.js"></script>
+    <script src="/assets/js/dist/settings.js"></script>
+  </body>
 </html>

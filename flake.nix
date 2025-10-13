@@ -18,8 +18,6 @@
           golangci-lint
           cmake
           nodejs_24
-          typescript
-          electron_38
         ];
         shellHook = ''
           go env -w GOPATH=$HOME/.local/share/go 

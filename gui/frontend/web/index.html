@@ -1,35 +1,56 @@
 {{define "web/index.html"}}
-<div id="web-management-view" style="display:none;">
+<div id="web-management-view" style="display: none">
   <div class="sub-nav">
-    <button onclick="showSubView('web-log-view', 'web-management-view')">Lịch sử Web</button>
-    <button onclick="showSubView('web-blocklist-view', 'web-management-view')">Danh sách chặn</button>
+    <button onclick="showSubView('web-log-view', 'web-management-view')">
+      Lịch sử Web
+    </button>
+    <button onclick="showSubView('web-blocklist-view', 'web-management-view')">
+      Danh sách chặn
+    </button>
   </div>
-  <div id="web-log-view" style="display:none;">
+  <div id="web-log-view" style="display: none">
     <h2>Lịch sử Truy cập Web</h2>
     <div id="web-log-controls">
       <button onclick="blockSelectedWebsites()">Chặn mục đã chọn</button>
     </div>
     <div id="web-time-filter-container">
-        <span>Lọc theo thời gian:</span>
-        <button onclick="searchWebLogs({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
-        <button onclick="searchWebLogs({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
-        <button onclick="searchWebLogs({since: '7 days ago', until: 'now'})">7 ngày qua</button>
-        <br>
-        <span>Từ: </span><input type="date" id="web_since_date"> <input type="time" id="web_since_time" step="60">
-        <span>Đến: </span><input type="date" id="web_until_date"> <input type="time" id="web_until_time" step="60">
-        <button onclick="searchWebLogs()">Xác nhận</button>
+      <span>Lọc theo thời gian:</span>
+      <button onclick="searchWebLogs({since: '1 hour ago', until: 'now'})">
+        1 giờ qua
+      </button>
+      <button onclick="searchWebLogs({since: '24 hours ago', until: 'now'})">
+        24 giờ qua
+      </button>
+      <button onclick="searchWebLogs({since: '7 days ago', until: 'now'})">
+        7 ngày qua
+      </button>
+      <br />
+      <span>Từ: </span><input type="date" id="web_since_date" />
+      <input type="time" id="web_since_time" step="60" /> <span>Đến: </span
+      ><input type="date" id="web_until_date" />
+      <input type="time" id="web_until_time" step="60" />
+      <button onclick="searchWebLogs()">Xác nhận</button>
     </div>
     <div id="web-log-items"></div>
   </div>
-  <div id="web-blocklist-view" style="display:none;">
+  <div id="web-blocklist-view" style="display: none">
     <h2>Quản lý Danh sách chặn Web</h2>
     <div id="web-blocklist-controls">
-        <button onclick="unblockSelectedWebsites()">Bỏ chặn mục đã chọn</button>
-        <button onclick="clearWebBlocklist()" style="background-color: #d9534f;">Xóa toàn bộ danh sách chặn</button>
-        <button onclick="saveWebBlocklist()">Lưu danh sách chặn</button>
-        <button onclick="document.getElementById('load-web-input').click()">Tải lên danh sách chặn</button>
-        <input type="file" id="load-web-input" style="display: none;" onchange="loadWebBlocklistFile(event)">
-        <span id="unblock-web-status" class="status-message"></span>
+      <button onclick="unblockSelectedWebsites()">Bỏ chặn mục đã chọn</button>
+      <button onclick="clearWebBlocklist()" style="background-color: #d9534f">
+        Xóa toàn bộ danh sách chặn
+      </button>
+      <button onclick="saveWebBlocklist()">Lưu danh sách chặn</button>
+      <button onclick="document.getElementById('load-web-input').click()">
+        Tải lên danh sách chặn
+      </button>
+      <input
+        type="file"
+        id="load-web-input"
+        style="display: none"
+        onchange="loadWebBlocklistFile(event)"
+      />
+      <span id="unblock-web-status" class="status-message"></span>
     </div>
     <div id="web-blocklist-items"></div>
   </div>

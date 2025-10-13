@@ -1,15 +1,22 @@
 {{define "settings/index.html"}}
-<div id="settings-view" style="display:none;">
+<div id="settings-view" style="display: none">
   <h2>Cài đặt</h2>
   <div id="settings-controls">
-      <div id="autostart-settings">
-          <h4>Khởi động cùng Windows</h4>
-          <p>Trạng thái: <b id="autostart-status">Không rõ</b></p>
-          <button id="autostart-toggle-btn" onclick="toggleAutostart()">Toggle</button>
-      </div>
-      <hr>
-      <button onclick="uninstall()" style="background-color: #d9534f;">Gỡ cài đặt ProcGuard</button>
-      <p><b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt ProcGuard khỏi hệ thống.</p>
+    <div id="autostart-settings">
+      <h4>Khởi động cùng Windows</h4>
+      <p>Trạng thái: <b id="autostart-status">Không rõ</b></p>
+      <button id="autostart-toggle-btn" onclick="toggleAutostart()">
+        Toggle
+      </button>
+    </div>
+    <hr />
+    <button onclick="uninstall()" style="background-color: #d9534f">
+      Gỡ cài đặt ProcGuard
+    </button>
+    <p>
+      <b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt
+      ProcGuard khỏi hệ thống.
+    </p>
   </div>
 </div>
 {{end}}
