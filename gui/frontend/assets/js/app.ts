@@ -1,10 +1,10 @@
-async function search(range){
-  const q = document.getElementById('q');
-  const sinceDateInput = document.getElementById('since_date');
-  const sinceTimeInput = document.getElementById('since_time');
-  const untilDateInput = document.getElementById('until_date');
-  const untilTimeInput = document.getElementById('until_time');
-  const results = document.getElementById('results');
+async function search(range?: { since: string, until: string }): Promise<void> {
+  const q = document.getElementById('q') as HTMLInputElement;
+  const sinceDateInput = document.getElementById('since_date') as HTMLInputElement;
+  const sinceTimeInput = document.getElementById('since_time') as HTMLInputElement;
+  const untilDateInput = document.getElementById('until_date') as HTMLInputElement;
+  const untilTimeInput = document.getElementById('until_time') as HTMLInputElement;
+  const results = document.getElementById('results') as HTMLDivElement;
 
   let since = '';
   let until = '';
@@ -31,7 +31,7 @@ async function search(range){
   const res = await fetch(url);
   const data = await res.json();
   if (data && data.length > 0) {
-    results.innerHTML = data.map(l => {
+    results.innerHTML = data.map((l: string[]) => {
         const processName = l[1];
         return `<div class="result-item"><input type="checkbox" name="search-result-app" value="${processName}"> ${l.join(' | ')}</div>`;
     }).join('');
@@ -40,9 +40,9 @@ async function search(range){
   }
 }
 
-async function block(){
-  const blockStatus = document.getElementById('block-status');
-  const selectedApps = Array.from(document.querySelectorAll('input[name="search-result-app"]:checked')).map(cb => cb.value);
+async function block(): Promise<void> {
+  const blockStatus = document.getElementById('block-status') as HTMLSpanElement;
+  const selectedApps = Array.from(document.querySelectorAll('input[name="search-result-app"]:checked')).map(cb => (cb as HTMLInputElement).value);
   if (selectedApps.length === 0) {
     alert("Vui lòng chọn một ứng dụng từ kết quả tìm kiếm để chặn.");
     return;
@@ -56,13 +56,13 @@ async function block(){
   setTimeout(() => { blockStatus.innerText = ''; }, 3000);
 }
 
-async function loadBlocklist() {
-    const blocklistItems = document.getElementById('blocklist-items');
+async function loadBlocklist(): Promise<void> {
+    const blocklistItems = document.getElementById('blocklist-items') as HTMLDivElement;
     const res = await fetch('/api/blocklist');
     const data = await res.json();
     blocklistItems.innerHTML = '';
     if (data && data.length > 0) {
-        data.forEach(app => {
+        data.forEach((app: string) => {
             blocklistItems.innerHTML += `<div><input type="checkbox" name="blocked-app" value="${app}"> ${app}</div>`;
         });
     } else {
@@ -70,9 +70,9 @@ async function loadBlocklist() {
     }
 }
 
-async function unblockSelected() {
-    const unblockStatus = document.getElementById('unblock-status');
-    const selectedApps = Array.from(document.querySelectorAll('input[name="blocked-app"]:checked')).map(cb => cb.value);
+async function unblockSelected(): Promise<void> {
+    const unblockStatus = document.getElementById('unblock-status') as HTMLSpanElement;
+    const selectedApps = Array.from(document.querySelectorAll('input[name="blocked-app"]:checked')).map(cb => (cb as HTMLInputElement).value);
     if (selectedApps.length === 0) {
         alert("Vui lòng chọn các ứng dụng để bỏ chặn.");
         return;
@@ -87,8 +87,8 @@ async function unblockSelected() {
     loadBlocklist(); // Refresh the list
 }
 
-async function clearBlocklist() {
-    const unblockStatus = document.getElementById('unblock-status');
+async function clearBlocklist(): Promise<void> {
+    const unblockStatus = document.getElementById('unblock-status') as HTMLSpanElement;
     if (confirm("Bạn có chắc chắn muốn xóa toàn bộ danh sách chặn không?")) {
         await fetch('/api/blocklist/clear', { method: 'POST' });
         unblockStatus.innerText = 'Đã xóa toàn bộ danh sách chặn.';
@@ -97,7 +97,7 @@ async function clearBlocklist() {
     }
 }
 
-async function saveBlocklist() {
+async function saveBlocklist(): Promise<void> {
     const response = await fetch('/api/blocklist/save');
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -110,9 +110,9 @@ async function saveBlocklist() {
     window.URL.revokeObjectURL(url);
 }
 
-async function loadBlocklistFile(event) {
-    const unblockStatus = document.getElementById('unblock-status');
-    const file = event.target.files[0];
+async function loadBlocklistFile(event: Event): Promise<void> {
+    const unblockStatus = document.getElementById('unblock-status') as HTMLSpanElement;
+    const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) {
         return;
     }

@@ -1,8 +1,8 @@
-async function searchWebLogs(range) {
-    const webSinceDateInput = document.getElementById('web_since_date');
-    const webSinceTimeInput = document.getElementById('web_since_time');
-    const webUntilDateInput = document.getElementById('web_until_date');
-    const webUntilTimeInput = document.getElementById('web_until_time');
+async function searchWebLogs(range?: { since: string, until: string }): Promise<void> {
+    const webSinceDateInput = document.getElementById('web_since_date') as HTMLInputElement;
+    const webSinceTimeInput = document.getElementById('web_since_time') as HTMLInputElement;
+    const webUntilDateInput = document.getElementById('web_until_date') as HTMLInputElement;
+    const webUntilTimeInput = document.getElementById('web_until_time') as HTMLInputElement;
 
     let since = '';
     let until = '';
@@ -21,8 +21,8 @@ async function searchWebLogs(range) {
     await loadWebLogs(since, until);
 }
 
-async function loadWebLogs(since = '', until = '') {
-    const webLogItems = document.getElementById('web-log-items');
+async function loadWebLogs(since = '', until = ''): Promise<void> {
+    const webLogItems = document.getElementById('web-log-items') as HTMLDivElement;
     let url = '/api/web-logs';
     const params = new URLSearchParams();
     if (since) {
@@ -41,7 +41,7 @@ async function loadWebLogs(since = '', until = '') {
     webLogItems.innerHTML = '';
     if (data && data.length > 0) {
         // Data is already sorted by timestamp descending from the server
-        webLogItems.innerHTML = data.map(l => {
+        webLogItems.innerHTML = data.map((l: string[]) => {
             const urlString = l[1];
             let domain = '';
             try {
@@ -55,8 +55,8 @@ async function loadWebLogs(since = '', until = '') {
     }
 }
 
-async function blockSelectedWebsites() {
-  const selectedDomains = Array.from(document.querySelectorAll('input[name="web-log-domain"]:checked')).map(cb => cb.value);
+async function blockSelectedWebsites(): Promise<void> {
+  const selectedDomains = Array.from(document.querySelectorAll('input[name="web-log-domain"]:checked')).map(cb => (cb as HTMLInputElement).value);
   if (selectedDomains.length === 0) {
     alert("Vui lòng chọn một trang web để chặn.");
     return;
@@ -74,16 +74,16 @@ async function blockSelectedWebsites() {
 
   alert('Các trang web đã chọn đã được thêm vào danh sách chặn.');
   // Uncheck all boxes
-  document.querySelectorAll('input[name="web-log-domain"]:checked').forEach(cb => cb.checked = false);
+  (document.querySelectorAll('input[name="web-log-domain"]:checked') as NodeListOf<HTMLInputElement>).forEach(cb => cb.checked = false);
 }
 
-async function loadWebBlocklist() {
-    const webBlocklistItems = document.getElementById('web-blocklist-items');
+async function loadWebBlocklist(): Promise<void> {
+    const webBlocklistItems = document.getElementById('web-blocklist-items') as HTMLDivElement;
     const res = await fetch('/api/web-blocklist');
     const data = await res.json();
     webBlocklistItems.innerHTML = '';
     if (data && data.length > 0) {
-        data.forEach(domain => {
+        data.forEach((domain:string) => {
             webBlocklistItems.innerHTML += `<div><input type="checkbox" name="blocked-website" value="${domain}"> ${domain} <button onclick="removeWebBlocklist('${domain}')">X</button></div>`;
         });
     } else {
@@ -91,7 +91,7 @@ async function loadWebBlocklist() {
     }
 }
 
-async function removeWebBlocklist(domain) {
+async function removeWebBlocklist(domain: string): Promise<void> {
   if (confirm(`Bạn có chắc chắn muốn bỏ chặn ${domain} không?`)) {
     await fetch('/api/web-blocklist/remove', { 
       method: 'POST', 
@@ -102,9 +102,9 @@ async function removeWebBlocklist(domain) {
   }
 }
 
-async function unblockSelectedWebsites() {
-    const unblockWebStatus = document.getElementById('unblock-web-status');
-    const selectedWebsites = Array.from(document.querySelectorAll('input[name="blocked-website"]:checked')).map(cb => cb.value);
+async function unblockSelectedWebsites(): Promise<void> {
+    const unblockWebStatus = document.getElementById('unblock-web-status') as HTMLSpanElement;
+    const selectedWebsites = Array.from(document.querySelectorAll('input[name="blocked-website"]:checked')).map(cb => (cb as HTMLInputElement).value);
     if (selectedWebsites.length === 0) {
         alert("Vui lòng chọn các trang web để bỏ chặn.");
         return;
@@ -121,8 +121,8 @@ async function unblockSelectedWebsites() {
     loadWebBlocklist(); // Refresh the list
 }
 
-async function clearWebBlocklist() {
-    const unblockWebStatus = document.getElementById('unblock-web-status');
+async function clearWebBlocklist(): Promise<void> {
+    const unblockWebStatus = document.getElementById('unblock-web-status') as HTMLSpanElement;
     if (confirm("Bạn có chắc chắn muốn xóa toàn bộ danh sách chặn web không?")) {
         await fetch('/api/web-blocklist/clear', { method: 'POST' });
         unblockWebStatus.innerText = 'Đã xóa toàn bộ danh sách chặn web.';
@@ -131,7 +131,7 @@ async function clearWebBlocklist() {
     }
 }
 
-async function saveWebBlocklist() {
+async function saveWebBlocklist(): Promise<void> {
     const response = await fetch('/api/web-blocklist/save');
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -144,9 +144,9 @@ async function saveWebBlocklist() {
     window.URL.revokeObjectURL(url);
 }
 
-async function loadWebBlocklistFile(event) {
-    const unblockWebStatus = document.getElementById('unblock-web-status');
-    const file = event.target.files[0];
+async function loadWebBlocklistFile(event: Event): Promise<void> {
+    const unblockWebStatus = document.getElementById('unblock-web-status') as HTMLSpanElement;
+    const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) {
         return;
     }

@@ -1,8 +1,8 @@
 let isAutostartEnabled = false;
 
-async function loadAutostartStatus() {
-    const autostartStatusEl = document.getElementById('autostart-status');
-    const autostartToggleBtn = document.getElementById('autostart-toggle-btn');
+async function loadAutostartStatus(): Promise<void> {
+    const autostartStatusEl = document.getElementById('autostart-status') as HTMLSpanElement;
+    const autostartToggleBtn = document.getElementById('autostart-toggle-btn') as HTMLButtonElement;
     try {
         const res = await fetch('/api/settings/autostart/status');
         if (!res.ok) {
@@ -21,8 +21,8 @@ async function loadAutostartStatus() {
     }
 }
 
-async function toggleAutostart() {
-    const autostartToggleBtn = document.getElementById('autostart-toggle-btn');
+async function toggleAutostart(): Promise<void> {
+    const autostartToggleBtn = document.getElementById('autostart-toggle-btn') as HTMLButtonElement;
     const endpoint = isAutostartEnabled ? '/api/settings/autostart/disable' : '/api/settings/autostart/enable';
     try {
         autostartToggleBtn.disabled = true;
@@ -34,21 +34,23 @@ async function toggleAutostart() {
             await loadAutostartStatus(); // Refresh status after action
         }
     } catch (e) {
-        alert(`Đã xảy ra lỗi: ${e.message}`);
+        if (e instanceof Error) {
+            alert(`Đã xảy ra lỗi: ${e.message}`);
+        }
     } finally {
         autostartToggleBtn.disabled = false;
     }
 }
 
-async function uninstall() {
-    const uninstallModal = document.getElementById('uninstall-modal');
+async function uninstall(): Promise<void> {
+    const uninstallModal = document.getElementById('uninstall-modal') as HTMLDivElement;
     uninstallModal.style.display = 'block';
 }
 
-function closeUninstallModal() {
-    const uninstallModal = document.getElementById('uninstall-modal');
-    const uninstallError = document.getElementById('uninstall-error');
-    const uninstallPasswordInput = document.getElementById('uninstall-password');
+function closeUninstallModal(): void {
+    const uninstallModal = document.getElementById('uninstall-modal') as HTMLDivElement;
+    const uninstallError = document.getElementById('uninstall-error') as HTMLParagraphElement;
+    const uninstallPasswordInput = document.getElementById('uninstall-password') as HTMLInputElement;
     uninstallModal.style.display = 'none';
     uninstallError.style.display = 'none';
     uninstallPasswordInput.value = '';
@@ -57,10 +59,10 @@ function closeUninstallModal() {
 document.addEventListener('DOMContentLoaded', () => {
     const uninstallForm = document.getElementById('uninstall-form');
     if (uninstallForm) {
-        uninstallForm.addEventListener('submit', async (event) => {
+        uninstallForm.addEventListener('submit', async (event: Event) => {
             event.preventDefault();
-            const uninstallPasswordInput = document.getElementById('uninstall-password');
-            const uninstallError = document.getElementById('uninstall-error');
+            const uninstallPasswordInput = document.getElementById('uninstall-password') as HTMLInputElement;
+            const uninstallError = document.getElementById('uninstall-error') as HTMLParagraphElement;
             const password = uninstallPasswordInput.value;
 
             const response = await fetch('/api/uninstall', {
