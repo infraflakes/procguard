@@ -51,7 +51,6 @@ clean:
 	$(GO_CLEAN)
 	rm -rf build/cache
 	rm -rf build/bin
-	rm -rf gui/frontend/node_modules
 	rm -rf gui/frontend/assets/js/dist
 
 install:
