@@ -42,13 +42,14 @@ async function search(range?: { since: string; until: string }): Promise<void> {
     results.innerHTML = data
       .map((l: string[]) => {
         const processName = l[1];
-        return `<div class="result-item"><input type="checkbox" name="search-result-app" value="${processName}"> ${l.join(
-          ' | '
-        )}</div>`;
+        return `<label class="list-group-item">
+                  <input class="form-check-input me-2" type="checkbox" name="search-result-app" value="${processName}">
+                  ${l.join(' | ')}
+                </label>`;
       })
       .join('');
   } else {
-    results.innerHTML = 'Không tìm thấy kết quả.';
+    results.innerHTML = '<div class="list-group-item">Không tìm thấy kết quả.</div>';
   }
 }
 
@@ -84,13 +85,15 @@ async function loadBlocklist(): Promise<void> {
   ) as HTMLDivElement;
   const res = await fetch('/api/blocklist');
   const data = await res.json();
-  blocklistItems.innerHTML = '';
   if (data && data.length > 0) {
-    data.forEach((app: string) => {
-      blocklistItems.innerHTML += `<div><input type="checkbox" name="blocked-app" value="${app}"> ${app}</div>`;
-    });
+    blocklistItems.innerHTML = data.map((app: string) => {
+      return `<label class="list-group-item">
+                <input class="form-check-input me-2" type="checkbox" name="blocked-app" value="${app}">
+                ${app}
+              </label>`;
+    }).join('');
   } else {
-    blocklistItems.innerHTML = 'Hiện không có ứng dụng nào bị chặn.';
+    blocklistItems.innerHTML = '<div class="list-group-item">Hiện không có ứng dụng nào bị chặn.</div>';
   }
 }
 

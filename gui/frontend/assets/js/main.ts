@@ -86,14 +86,30 @@ function showTopLevelView(viewName: string): void {
 
 function showSubView(viewName: string, parentView: string): void {
   let subviews: string[];
+  let tabContainerId: string;
+
   if (parentView === 'app-management-view') {
     subviews = appSubViews;
+    tabContainerId = 'appManTabs';
   } else if (parentView === 'web-management-view') {
     subviews = webSubViews;
+    tabContainerId = 'webManTabs';
   } else {
     return;
   }
 
+  // --- Handle Button Highlighting ---
+  const tabContainer = document.getElementById(tabContainerId);
+  if (tabContainer) {
+    const tabButtons = tabContainer.querySelectorAll('.nav-link');
+    tabButtons.forEach(button => button.classList.remove('active'));
+    
+    const buttonId = viewName.replace('-view', '-tab');
+    const activeButton = document.getElementById(buttonId);
+    if (activeButton) activeButton.classList.add('active');
+  }
+
+  // --- Handle Content Visibility (using original display:none/block logic) ---
   subviews.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -101,6 +117,7 @@ function showSubView(viewName: string, parentView: string): void {
   const el = document.getElementById(viewName);
   if (el) el.style.display = 'block';
 
+  // --- Keep the original data loading logic ---
   if (viewName === 'blocklist-view') {
     loadBlocklist();
   } else if (viewName === 'web-blocklist-view') {

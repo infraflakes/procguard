@@ -53,7 +53,6 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
   const data = await res.json();
   webLogItems.innerHTML = '';
   if (data && data.length > 0) {
-    // Data is already sorted by timestamp descending from the server
     webLogItems.innerHTML = data
       .map((l: string[]) => {
         const urlString = l[1];
@@ -64,13 +63,14 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
         } catch (e) {
           // Ignore invalid URLs
         }
-        return `<div class="result-item"><input type="checkbox" name="web-log-domain" value="${domain}"> ${l.join(
-          ' | '
-        )}</div>`;
+        return `<label class="list-group-item">
+                  <input class="form-check-input me-2" type="checkbox" name="web-log-domain" value="${domain}">
+                  ${l.join(' | ')}
+                </label>`;
       })
       .join('');
   } else {
-    webLogItems.innerHTML = 'Chưa có lịch sử truy cập web.';
+    webLogItems.innerHTML = '<div class="list-group-item">Chưa có lịch sử truy cập web.</div>';
   }
 }
 
@@ -110,11 +110,19 @@ async function loadWebBlocklist(): Promise<void> {
   const data = await res.json();
   webBlocklistItems.innerHTML = '';
   if (data && data.length > 0) {
-    data.forEach((domain: string) => {
-      webBlocklistItems.innerHTML += `<div><input type="checkbox" name="blocked-website" value="${domain}"> ${domain} <button onclick="removeWebBlocklist('${domain}')">X</button></div>`;
-    });
+    webBlocklistItems.innerHTML = data.map((domain: string) => {
+      return `
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <label class="flex-grow-1 mb-0">
+            <input class="form-check-input me-2" type="checkbox" name="blocked-website" value="${domain}">
+            ${domain}
+          </label>
+          <button class="btn btn-sm btn-outline-danger" onclick="removeWebBlocklist('${domain}')">&times;</button>
+        </div>
+      `;
+    }).join('');
   } else {
-    webBlocklistItems.innerHTML = 'Hiện không có trang web nào bị chặn.';
+    webBlocklistItems.innerHTML = '<div class="list-group-item">Hiện không có trang web nào bị chặn.</div>';
   }
 }
 
