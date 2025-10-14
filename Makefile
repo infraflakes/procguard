@@ -29,7 +29,7 @@ build: build-frontend
 	@echo "Generating Windows resources..."
 	go generate ./...
 	@echo "Building ProcGuardSvc.exe for windows..."
-	GOOS=windows $(GO_BUILD) -ldflags="-H windowsgui -X main.version=$(VERSION)" -o build/bin/$(BINARY_WINDOWS_NAME) .
+	GOOS=windows $(GO_BUILD) -ldflags="-w -H windowsgui -X main.version=$(VERSION)" -o build/bin/$(BINARY_WINDOWS_NAME) .
 
 build-frontend:
 	@echo "Building frontend..."
