@@ -1,12 +1,31 @@
 {{define "welcome/index.html"}}
 <div id="welcome-view">
-  <h2>Chào mừng đến với ProcGuard</h2>
-  <p>Chọn một mục để bắt đầu:</p>
-  <button class="big-button" onclick="showTopLevelView('app-management-view')">
-    Quản lý Ứng dụng
-  </button>
-  <button class="big-button" onclick="showTopLevelView('web-management-view')">
-    Quản lý Web
-  </button>
+    <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+        <div class="container-fluid py-5">
+            <h1 class="display-5 fw-bold">Chào mừng đến với ProcGuard</h1>
+            <p class="col-md-8 fs-4">Đây là trung tâm điều khiển của bạn. Từ đây, bạn có thể quản lý các ứng dụng và truy cập web được giám sát.</p>
+        </div>
+    </div>
+
+    <div class="row align-items-md-stretch">
+        <div class="col-md-6 mb-4">
+            <div class="h-100 p-5 text-bg-dark rounded-3">
+                <h2>Quản lý Ứng dụng</h2>
+                <p>Xem lại lịch sử sử dụng ứng dụng, chặn hoặc bỏ chặn các chương trình.</p>
+                <button class="btn btn-outline-light" type="button" onclick="showTopLevelView('app-management-view')">
+                    Đi tới Quản lý Ứng dụng
+                </button>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="h-100 p-5 bg-body-tertiary border rounded-3">
+                <h2>Quản lý Web</h2>
+                <p>Xem lại lịch sử truy cập web và quản lý danh sách các trang web bị chặn.</p>
+                <button class="btn btn-outline-secondary" type="button" onclick="showTopLevelView('web-management-view')">
+                    Đi tới Quản lý Web
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {{end}}

@@ -1,21 +1,42 @@
 {{define "settings/index.html"}}
-<div id="settings-view" style="display: none">
-  <h2>Cài đặt</h2>
-  <div id="settings-controls">
-    <div id="autostart-settings">
-      <h4>Khởi động cùng Windows</h4>
-      <p>Trạng thái: <b id="autostart-status">Không rõ</b></p>
-      <button id="autostart-toggle-btn" onclick="toggleAutostart()">
-        Toggle
-      </button>
+<div id="settings-view" style="display: none;">
+    <h2 class="mb-4">Cài đặt</h2>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+
+            <!-- Autostart Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Khởi động cùng Windows</h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Trạng thái: <span class="badge bg-secondary" id="autostart-status">Không rõ</span>
+                    </p>
+                    <p class="card-text">Bật tùy chọn này để ProcGuard tự động chạy khi bạn đăng nhập vào Windows.</p>
+                    <button id="autostart-toggle-btn" class="btn btn-primary" onclick="toggleAutostart()">
+                        Toggle
+                    </button>
+                </div>
+            </div>
+
+            <!-- Uninstall Card -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4>Gỡ cài đặt ProcGuard</h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        <b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt ProcGuard khỏi hệ thống.
+                    </p>
+                    <button class="btn btn-danger" onclick="uninstall()">
+                        Gỡ cài đặt ProcGuard
+                    </button>
+                </div>
+            </div>
+
+        </div>
     </div>
-    <button onclick="uninstall()" style="background-color: #f76f55">
-      Gỡ cài đặt ProcGuard
-    </button>
-    <p>
-      <b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt
-      ProcGuard khỏi hệ thống.
-    </p>
-  </div>
 </div>
 {{end}}
