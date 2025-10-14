@@ -6,7 +6,7 @@ import (
 	"io/fs"
 )
 
-//go:embed frontend/*.html frontend/*/*.html frontend/assets/css frontend/assets/js/dist
+//go:embed frontend
 var FrontendFS embed.FS
 
 var Templates *template.Template
