@@ -27,7 +27,7 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 	}
 
 	// Build the query
-	q := "SELECT process_name, pid, parent_process_name, start_time, end_time FROM app_events WHERE 1=1"
+	q := "SELECT process_name, pid, parent_process_name, exe_path, start_time, end_time FROM app_events WHERE 1=1"
 	args := make([]interface{}, 0)
 
 	if query != "" {
@@ -62,23 +62,24 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 
 	var results [][]string
 	for rows.Next() {
-		var processName, parentProcessName string
+		var processName, parentProcessName, exePath string
 		var pid int32
 		var startTime, endTime sql.NullInt64
 
-		if err := rows.Scan(&processName, &pid, &parentProcessName, &startTime, &endTime); err != nil {
+		if err := rows.Scan(&processName, &pid, &parentProcessName, &exePath, &startTime, &endTime); err != nil {
 			continue
 		}
 
 		startTimeStr := time.Unix(startTime.Int64, 0).Format("2006-01-02 15:04:05")
 
 		// Format the results into the structure the frontend expects
-		// [Time, ProcessName, PID, ParentName]
+		// [Time, ProcessName, PID, ParentName, ExePath]
 		results = append(results, []string{
 			startTimeStr,
 			processName,
 			strconv.Itoa(int(pid)),
 			parentProcessName,
+			exePath,
 		})
 	}
 

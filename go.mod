@@ -4,9 +4,10 @@ go 1.25.0
 
 require (
 	github.com/akavel/rsrc v0.10.2
+	github.com/bi-zone/go-fileversion v1.0.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	golang.org/x/crypto v0.24.0
-	golang.org/x/sys v0.36.0
+	golang.org/x/sys v0.37.0
 	modernc.org/sqlite v1.39.0
 )
 
@@ -24,6 +25,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
+	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

@@ -55,8 +55,12 @@ func RunEventLogging(appLogger data.Logger, db *sql.DB) {
 						parentName, _ = parent.Name()
 					}
 
-					_, err := db.Exec("INSERT INTO app_events (process_name, pid, parent_process_name, start_time) VALUES (?, ?, ?, ?)",
-						name, p.Pid, parentName, time.Now().Unix())
+					exePath, err := p.Exe()
+					if err != nil {
+						appLogger.Printf("Failed to get exe path for %s (pid %d): %v", name, p.Pid, err)
+					}
+					_, err = db.Exec("INSERT INTO app_events (process_name, pid, parent_process_name, exe_path, start_time) VALUES (?, ?, ?, ?, ?)",
+						name, p.Pid, parentName, exePath, time.Now().Unix())
 					if err != nil {
 						appLogger.Printf("Failed to insert new process %s (pid %d): %v", name, p.Pid, err)
 					}

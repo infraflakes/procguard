@@ -2,12 +2,17 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
+	"procguard/internal/app"
 	"procguard/internal/data"
 	"strings"
 	"sync"
+
+	"github.com/bi-zone/go-fileversion"
 )
 
 // Server holds the dependencies for the GUI server.
@@ -73,6 +78,50 @@ func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
+	exePath := r.URL.Query().Get("path")
+	if exePath == "" {
+		http.Error(w, "Missing app path", http.StatusBadRequest)
+		return
+	}
+
+	// Get commercial name
+	info, err := fileversion.New(exePath)
+	var commercialName string
+	if err == nil {
+		commercialName = info.FileDescription()
+		if commercialName == "" {
+			commercialName = info.ProductName()
+		}
+		if commercialName == "" {
+			commercialName = info.OriginalFilename()
+		}
+	}
+
+	// If we still don't have a good name, use the filename without the extension.
+	if commercialName == "" {
+		commercialName = strings.TrimSuffix(filepath.Base(exePath), filepath.Ext(exePath))
+	}
+
+	// Get icon
+	icon, err := app.GetAppIconAsBase64(exePath)
+	if err != nil {
+		// Log the error but don't fail the request
+		srv.Logger.Printf("Failed to get icon for %s: %v", exePath, err)
+	}
+
+	response := struct {
+		CommercialName string `json:"commercialName"`
+		Icon           string `json:"icon"`
+	}{
+		CommercialName: commercialName,
+		Icon:           icon,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func (srv *Server) registerRoutes(r *http.ServeMux) {
 	// Handlers
 	r.HandleFunc("/logout", srv.handleLogout)
@@ -105,4 +154,5 @@ func (srv *Server) registerRoutes(r *http.ServeMux) {
 	r.HandleFunc("/api/settings/autostart/status", srv.handleGetAutostartStatus)
 	r.HandleFunc("/api/settings/autostart/enable", srv.handleEnableAutostart)
 	r.HandleFunc("/api/settings/autostart/disable", srv.handleDisableAutostart)
+	r.HandleFunc("/api/app-details", srv.handleAppDetails)
 }

@@ -55,6 +55,7 @@ func createSchema(db *sql.DB) error {
 		process_name TEXT NOT NULL,
 		pid INTEGER NOT NULL,
 		parent_process_name TEXT,
+		exe_path TEXT,
 		start_time INTEGER NOT NULL,
 		end_time INTEGER
 	);
