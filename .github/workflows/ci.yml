@@ -43,6 +43,9 @@ jobs:
       - name: Run frontend formatter check
         run: cd gui && npm run format-check
 
+      - name: Build frontend
+        run: make build-frontend
+
       - name: Install golangci-lint
         run: |
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
