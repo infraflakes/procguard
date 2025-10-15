@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"procguard/internal/data"
+	"strings"
 	"sync"
 )
 
@@ -64,7 +65,7 @@ func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 		localIsAuthenticated := srv.IsAuthenticated
 		srv.Mu.Unlock()
 
-		if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" && r.URL.Path != "/api/blocklist" {
+		if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" && r.URL.Path != "/api/blocklist" && !strings.HasPrefix(r.URL.Path, "/src/") && !strings.HasPrefix(r.URL.Path, "/dist/") {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}

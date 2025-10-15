@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -56,6 +57,20 @@ func runApi() {
 }
 
 func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
+	// Create a sub-filesystem rooted at the "frontend" directory.
+	subFS, err := fs.Sub(gui.FrontendFS, "frontend")
+	if err != nil {
+		log.Fatalf("Failed to create sub-filesystem for frontend: %v", err)
+	}
+
+	// Create a file server for our static assets from the sub-filesystem.
+	staticFS := http.FileServer(http.FS(subFS))
+
+	// Serve the new static file directories.
+	r.Handle("/dist/", staticFS)
+	r.Handle("/src/", staticFS)
+
+	// Keep the existing template rendering handlers.
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		gui.HandleIndex(&srv.Mu, srv.IsAuthenticated, srv.Logger, w, r)
 	})

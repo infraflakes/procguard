@@ -1,0 +1,170 @@
+{{define "web/web.html"}}
+<div id="web-management-view" style="display: none">
+  <!-- Tab Navigation -->
+  <ul class="nav nav-tabs" id="webManTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link active"
+        id="web-log-tab"
+        type="button"
+        role="tab"
+        onclick="showSubView('web-log-view', 'web-management-view')"
+      >
+        Lịch sử Web
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
+        id="web-blocklist-tab"
+        type="button"
+        role="tab"
+        onclick="showSubView('web-blocklist-view', 'web-management-view')"
+      >
+        Quản lý danh sách chặn
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="webManTabsContent">
+    <!-- Web Log View -->
+    <div id="web-log-view" role="tabpanel">
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Lịch sử Truy cập Web</h5>
+          <div class="mb-3">
+            <button class="btn btn-danger" onclick="blockSelectedWebsites()">
+              Chặn mục đã chọn
+            </button>
+          </div>
+
+          <div class="card mt-3">
+            <div class="card-header d-flex align-items-center">
+              <span class="me-3">Lọc theo thời gian:</span>
+              <div class="btn-group" role="group">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  onclick="searchWebLogs({since: '1 hour ago', until: 'now'})"
+                >
+                  1 giờ qua
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  onclick="searchWebLogs({since: '24 hours ago', until: 'now'})"
+                >
+                  24 giờ qua
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  onclick="searchWebLogs({since: '7 days ago', until: 'now'})"
+                >
+                  7 ngày qua
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 align-items-center">
+                <div class="col-auto">
+                  <label class="col-form-label">Từ:</label>
+                </div>
+                <div class="col-auto">
+                  <input type="date" class="form-control" id="web_since_date" />
+                </div>
+                <div class="col-auto">
+                  <input
+                    type="time"
+                    class="form-control"
+                    id="web_since_time"
+                    step="60"
+                  />
+                </div>
+                <div class="col-auto">
+                  <label class="col-form-label">Đến:</label>
+                </div>
+                <div class="col-auto">
+                  <input type="date" class="form-control" id="web_until_date" />
+                </div>
+                <div class="col-auto">
+                  <input
+                    type="time"
+                    class="form-control"
+                    id="web_until_time"
+                    step="60"
+                  />
+                </div>
+                <div class="col-auto">
+                  <button class="btn btn-primary" onclick="searchWebLogs()">
+                    Xác nhận
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h5 class="mt-4">Lịch sử truy cập</h5>
+          <div id="web-log-items" class="list-group">
+            <!-- Web log items will be dynamically inserted here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Web Blocklist View -->
+    <div id="web-blocklist-view" style="display: none" role="tabpanel">
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Các trang web bị chặn</h5>
+          <div class="btn-toolbar" role="toolbar">
+            <div class="btn-group me-2" role="group">
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick="unblockSelectedWebsites()"
+              >
+                Bỏ chặn mục đã chọn
+              </button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                onclick="clearWebBlocklist()"
+              >
+                Xóa toàn bộ
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                onclick="saveWebBlocklist()"
+              >
+                Lưu danh sách
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                onclick="document.getElementById('load-web-input').click()"
+              >
+                Tải lên danh sách
+              </button>
+            </div>
+          </div>
+          <input
+            type="file"
+            id="load-web-input"
+            style="display: none"
+            onchange="loadWebBlocklistFile(event)"
+          />
+          <span id="unblock-web-status" class="form-text"></span>
+          <div id="web-blocklist-items" class="list-group mt-3">
+            <!-- Web blocklist items will be dynamically inserted here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

@@ -7,3 +7,5 @@ todo.md
 idea.md
 fix.md
 .venv/
+node_modules
+gui/frontend/dist

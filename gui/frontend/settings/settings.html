@@ -1,0 +1,51 @@
+{{define "settings/settings.html"}}
+<div id="settings-view" style="display: none">
+  <h2 class="mb-4">Cài đặt</h2>
+
+  <div class="row">
+    <div class="col-md-8 mx-auto">
+      <!-- Autostart Settings Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h4>Khởi động cùng Windows</h4>
+        </div>
+        <div class="card-body">
+          <p class="card-text">
+            Trạng thái:
+            <span class="badge bg-secondary" id="autostart-status"
+              >Không rõ</span
+            >
+          </p>
+          <p class="card-text">
+            Bật tùy chọn này để ProcGuard tự động chạy khi bạn đăng nhập vào
+            Windows.
+          </p>
+          <button
+            id="autostart-toggle-btn"
+            class="btn btn-primary"
+            onclick="toggleAutostart()"
+          >
+            Toggle
+          </button>
+        </div>
+      </div>
+
+      <!-- Uninstall Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h4>Gỡ cài đặt ProcGuard</h4>
+        </div>
+        <div class="card-body">
+          <p class="card-text">
+            <b>Cảnh báo:</b> Thao tác này sẽ xóa toàn bộ dữ liệu và gỡ cài đặt
+            ProcGuard khỏi hệ thống.
+          </p>
+          <button type="button" class="btn btn-danger" onclick="uninstall()">
+            Gỡ cài đặt ProcGuard
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

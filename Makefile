@@ -20,16 +20,20 @@ BINARY_WINDOWS_NAME=ProcGuardSvc.exe
 # Build flags
 LDFLAGS = -ldflags="-s -w -X main.version=$(VERSION)"
 
-.PHONY: all build run fmt clean test install
+.PHONY: all build build-frontend run fmt clean test install
 
 all: build
 
-build:
+build: build-frontend
 	mkdir -p build/cache build/bin
 	@echo "Generating Windows resources..."
 	go generate ./...
 	@echo "Building ProcGuardSvc.exe for windows..."
-	GOOS=windows $(GO_BUILD) -ldflags="-H windowsgui -X main.version=$(VERSION)" -o build/bin/$(BINARY_WINDOWS_NAME) .
+	GOOS=windows $(GO_BUILD) -ldflags="-w -H windowsgui -X main.version=$(VERSION)" -o build/bin/$(BINARY_WINDOWS_NAME) .
+
+build-frontend:
+	@echo "Building frontend..."
+	cd gui && npm install && npm run build
 
 run:
 	$(GO_RUN) . --
@@ -37,6 +41,7 @@ run:
 fmt:
 	@echo "Formatting code..."
 	$(GO_FMT) ./...
+	cd gui && npm run format
 
 test:
 	$(GO_TEST) ./...
@@ -46,6 +51,7 @@ clean:
 	$(GO_CLEAN)
 	rm -rf build/cache
 	rm -rf build/bin
+	rm -rf gui/frontend/dist
 
 install:
 	@echo "Installing $(BINARY_NAME) to $(shell $(GO_CMD) env GOPATH)/bin..."

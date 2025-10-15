@@ -1,0 +1,135 @@
+button {
+  color: #fff;
+  background: #2e2e2e;
+  border: 0;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#search-container,
+#blocklist-controls,
+#time-filter-container {
+  margin-bottom: 1rem;
+}
+#time-filter-container > * {
+  margin-right: 1rem;
+}
+nav > button {
+  background: #333;
+  color: #fff;
+}
+.status-message {
+  margin-left: 1rem;
+  padding: 5px;
+  background: #333;
+  color: #fff;
+  border-radius: 3px;
+}
+.result-item {
+  margin-bottom: 5px;
+}
+body > div {
+  margin-top: 2rem;
+}
+
+.big-button {
+  color: #fff;
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  margin: 1rem;
+}
+
+/* Fix for inactive Bootstrap tab background in dark mode */
+.nav-tabs .nav-link:not(.active) {
+  background-color: #e6e4d7;
+  color: #000;
+}
+
+body {
+  background-color: #f2f0e3;
+  color: #000;
+}
+
+#login-page {
+  background-color: #e3dacc;
+}
+
+#welcome-view .btn-outline-light {
+  background-color: #f76f53;
+  color: #000;
+  border-color: #f76f53;
+}
+
+#welcome-view .btn-outline-light:hover {
+  background-color: #e6e4d7;
+  color: #000;
+  border-color: #e6e4d7;
+}
+
+.bg-body-tertiary {
+  background-color: #e3dacc !important;
+}
+
+.navbar {
+  background-color: #f2f0e3 !important;
+}
+
+.nav-tabs .nav-link.active {
+  background-color: #f76f53;
+  color: #000;
+  border-color: #f76f53;
+}
+
+.card-body {
+  background-color: #e3dacc;
+}
+
+#login-page .card-body {
+  background-color: #f2f0e3;
+}
+
+.card {
+  border-color: #e3dacc;
+}
+
+.card-header {
+  background-color: #e3dacc;
+  border-color: #e3dacc;
+}
+
+.btn-outline-secondary {
+  color: #000;
+  border-color: #000;
+  background-color: transparent;
+}
+
+.btn-outline-secondary:hover {
+  color: #fff;
+  background-color: #000;
+  border-color: #000;
+}
+
+.btn-danger {
+  background-color: #f76f53;
+  color: #000;
+  border-color: #f76f53;
+}
+
+.btn-danger:hover,
+.btn-danger:active {
+  background-color: #b54f3a !important;
+  border-color: #b54f3a !important;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #000;
+  border-color: #000;
+}
+
+.btn-primary:hover {
+  color: #000;
+  background-color: #e6e4d7;
+  border-color: #e6e4d7;
+}
