@@ -39,30 +39,40 @@ async function search(range?: { since: string; until: string }): Promise<void> {
   const res = await fetch(url);
   const data = await res.json();
   if (data && data.length > 0) {
-    const itemsHtml = await Promise.all(data.map(async (l: string[]) => {
-      const processName = l[1];
-      const exePath = l[4]; // exe_path is the 5th element
-      let commercialName = '';
-      let icon = '';
+    const itemsHtml = await Promise.all(
+      data.map(async (l: string[]) => {
+        const processName = l[1];
+        const exePath = l[4]; // exe_path is the 5th element
+        let commercialName = '';
+        let icon = '';
 
-      if (exePath) {
-        const appDetailsRes = await fetch(`/api/app-details?path=${encodeURIComponent(exePath)}`);
-        if (appDetailsRes.ok) {
-          const appDetails = await appDetailsRes.json();
-          commercialName = appDetails.commercialName;
-          icon = appDetails.icon;
+        if (exePath) {
+          const appDetailsRes = await fetch(
+            `/api/app-details?path=${encodeURIComponent(exePath)}`
+          );
+          if (appDetailsRes.ok) {
+            const appDetails = await appDetailsRes.json();
+            commercialName = appDetails.commercialName;
+            icon = appDetails.icon;
+          }
         }
-      }
 
-      const otherInfo = l.filter((_, i) => i !== 1 && i !== 4).join(' | ');
+        const otherInfo = l.filter((_, i) => i !== 1 && i !== 4).join(' | ');
 
-      return `<label class="list-group-item d-flex align-items-center">
+        return `<label class="list-group-item d-flex align-items-center">
                 <input class="form-check-input me-2" type="checkbox" name="search-result-app" value="${processName}">
-                ${icon ? `<img src="data:image/png;base64,${icon}" class="me-2" style="width: 24px; height: 24px;">` : '<div class="me-2" style="width: 24px; height: 24px;"></div>'}
-                <span class="fw-bold me-2">${commercialName || processName}</span>
+                ${
+                  icon
+                    ? `<img src="data:image/png;base64,${icon}" class="me-2" style="width: 24px; height: 24px;">`
+                    : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
+                }
+                <span class="fw-bold me-2">${
+                  commercialName || processName
+                }</span>
                 <span class="text-muted">${otherInfo}</span>
               </label>`;
-    }));
+      })
+    );
     results.innerHTML = itemsHtml.join('');
   } else {
     results.innerHTML =
