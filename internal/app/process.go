@@ -3,6 +3,7 @@ package app
 import (
 	"database/sql"
 	"os"
+	"path/filepath"
 	"procguard/internal/data"
 	"slices"
 	"strings"
@@ -156,6 +157,17 @@ func shouldLogProcess(p *process.Process) bool {
 	// Do not log a process if its parent has the same name.
 	if name == parentName {
 		return false
+	}
+
+	// Do not log a process if it's in the same directory as its parent.
+	childExe, err := p.Exe()
+	if err == nil {
+		parentExe, err := parent.Exe()
+		if err == nil {
+			if filepath.Dir(childExe) == filepath.Dir(parentExe) {
+				return false
+			}
+		}
 	}
 
 	// Windows-specific checks
