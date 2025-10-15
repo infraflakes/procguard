@@ -51,6 +51,10 @@ body {
   color: #000;
 }
 
+#login-page {
+  background-color: #e3dacc;
+}
+
 #welcome-view .btn-outline-light {
   background-color: #f76f53;
   color: #000;
@@ -81,6 +85,10 @@ body {
   background-color: #e3dacc;
 }
 
+#login-page .card-body {
+  background-color: #f2f0e3;
+}
+
 .card {
   border-color: #e3dacc;
 }
@@ -108,9 +116,10 @@ body {
   border-color: #f76f53;
 }
 
-.btn-danger:hover {
-  background-color: #b54f3a;
-  border-color: #b54f3a;
+.btn-danger:hover,
+.btn-danger:active {
+  background-color: #b54f3a !important;
+  border-color: #b54f3a !important;
 }
 
 .btn-primary {
