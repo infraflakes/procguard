@@ -102,6 +102,12 @@
           document.getElementById('confirm-password').value;
         const errorMessage = document.getElementById('error-message');
 
+        if (newPassword.trim() === '') {
+          errorMessage.textContent = 'Mật khẩu không được để trống';
+          errorMessage.style.display = 'block';
+          return;
+        }
+
         if (newPassword !== confirmPassword) {
           errorMessage.textContent = 'Mật khẩu không khớp';
           errorMessage.style.display = 'block';
