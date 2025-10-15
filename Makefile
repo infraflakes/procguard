@@ -33,7 +33,7 @@ build: build-frontend
 
 build-frontend:
 	@echo "Building frontend..."
-	cd gui/frontend && npm install && npm run build
+	cd gui && npm install && npm run build
 
 run:
 	$(GO_RUN) . --
@@ -41,7 +41,7 @@ run:
 fmt:
 	@echo "Formatting code..."
 	$(GO_FMT) ./...
-	cd gui/frontend && npm run format
+	cd gui && npm run format
 
 test:
 	$(GO_TEST) ./...
@@ -51,7 +51,7 @@ clean:
 	$(GO_CLEAN)
 	rm -rf build/cache
 	rm -rf build/bin
-	rm -rf gui/frontend/assets/js/dist
+	rm -rf gui/frontend/dist
 
 install:
 	@echo "Installing $(BINARY_NAME) to $(shell $(GO_CMD) env GOPATH)/bin..."
