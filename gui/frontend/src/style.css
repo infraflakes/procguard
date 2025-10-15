@@ -42,6 +42,6 @@ body > div {
 
 /* Fix for inactive Bootstrap tab background in dark mode */
 .nav-tabs .nav-link:not(.active) {
-    background-color: #495057;
-    color: #fff;
+  background-color: #495057;
+  color: #fff;
 }

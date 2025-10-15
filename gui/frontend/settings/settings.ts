@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const uninstallModalEl = document.getElementById('uninstall-modal');
   if (uninstallModalEl) {
     // Assuming Bootstrap's JS is loaded and available globally
-    uninstallModalInstance = new (window as any).bootstrap.Modal(uninstallModalEl);
+    uninstallModalInstance = new (window as any).bootstrap.Modal(
+      uninstallModalEl
+    );
   }
 
   const uninstallForm = document.getElementById('uninstall-form');
@@ -42,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-
 async function loadAutostartStatus(): Promise<void> {
   const autostartStatusEl = document.getElementById(
     'autostart-status'
@@ -63,8 +64,14 @@ async function loadAutostartStatus(): Promise<void> {
     isAutostartEnabled = data.enabled;
 
     autostartStatusEl.textContent = isAutostartEnabled ? 'Đã bật' : 'Đã tắt';
-    autostartStatusEl.classList.remove('bg-secondary', 'bg-danger', 'bg-success');
-    autostartStatusEl.classList.add(isAutostartEnabled ? 'bg-success' : 'bg-secondary');
+    autostartStatusEl.classList.remove(
+      'bg-secondary',
+      'bg-danger',
+      'bg-success'
+    );
+    autostartStatusEl.classList.add(
+      isAutostartEnabled ? 'bg-success' : 'bg-secondary'
+    );
 
     autostartToggleBtn.textContent = isAutostartEnabled
       ? 'Tắt tự động khởi động'
@@ -107,8 +114,10 @@ async function toggleAutostart(): Promise<void> {
 function uninstall(): void {
   if (uninstallModalInstance) {
     // Clear any previous error messages when opening
-    const uninstallError = document.getElementById('uninstall-error') as HTMLParagraphElement;
-    if(uninstallError) uninstallError.style.display = 'none';
+    const uninstallError = document.getElementById(
+      'uninstall-error'
+    ) as HTMLParagraphElement;
+    if (uninstallError) uninstallError.style.display = 'none';
     uninstallModalInstance.show();
   }
 }
@@ -120,6 +129,6 @@ function closeUninstallModal(): void {
     ) as HTMLInputElement;
     uninstallModalInstance.hide();
     // Reset form state after modal closes
-    if(uninstallPasswordInput) uninstallPasswordInput.value = '';
+    if (uninstallPasswordInput) uninstallPasswordInput.value = '';
   }
 }

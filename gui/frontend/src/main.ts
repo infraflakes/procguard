@@ -102,8 +102,8 @@ function showSubView(viewName: string, parentView: string): void {
   const tabContainer = document.getElementById(tabContainerId);
   if (tabContainer) {
     const tabButtons = tabContainer.querySelectorAll('.nav-link');
-    tabButtons.forEach(button => button.classList.remove('active'));
-    
+    tabButtons.forEach((button) => button.classList.remove('active'));
+
     const buttonId = viewName.replace('-view', '-tab');
     const activeButton = document.getElementById(buttonId);
     if (activeButton) activeButton.classList.add('active');

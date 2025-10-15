@@ -70,7 +70,8 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
       })
       .join('');
   } else {
-    webLogItems.innerHTML = '<div class="list-group-item">Chưa có lịch sử truy cập web.</div>';
+    webLogItems.innerHTML =
+      '<div class="list-group-item">Chưa có lịch sử truy cập web.</div>';
   }
 }
 
@@ -110,8 +111,9 @@ async function loadWebBlocklist(): Promise<void> {
   const data = await res.json();
   webBlocklistItems.innerHTML = '';
   if (data && data.length > 0) {
-    webBlocklistItems.innerHTML = data.map((domain: string) => {
-      return `
+    webBlocklistItems.innerHTML = data
+      .map((domain: string) => {
+        return `
         <div class="list-group-item d-flex justify-content-between align-items-center">
           <label class="flex-grow-1 mb-0">
             <input class="form-check-input me-2" type="checkbox" name="blocked-website" value="${domain}">
@@ -120,9 +122,11 @@ async function loadWebBlocklist(): Promise<void> {
           <button class="btn btn-sm btn-outline-danger" onclick="removeWebBlocklist('${domain}')">&times;</button>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
   } else {
-    webBlocklistItems.innerHTML = '<div class="list-group-item">Hiện không có trang web nào bị chặn.</div>';
+    webBlocklistItems.innerHTML =
+      '<div class="list-group-item">Hiện không có trang web nào bị chặn.</div>';
   }
 }
 

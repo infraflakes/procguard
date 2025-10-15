@@ -1,86 +1,178 @@
 {{define "app/app.html"}}
 <div id="app-management-view" style="display: none">
-    <!-- Tab Navigation -->
-    <ul class="nav nav-tabs" id="appManTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="search-tab" type="button" role="tab" onclick="showSubView('search-view', 'app-management-view')">
-                Tìm kiếm & Chặn ứng dụng
+  <!-- Tab Navigation -->
+  <ul class="nav nav-tabs" id="appManTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link active"
+        id="search-tab"
+        type="button"
+        role="tab"
+        onclick="showSubView('search-view', 'app-management-view')"
+      >
+        Tìm kiếm & Chặn ứng dụng
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
+        id="blocklist-tab"
+        type="button"
+        role="tab"
+        onclick="showSubView('blocklist-view', 'app-management-view')"
+      >
+        Quản lý danh sách chặn
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="appManTabsContent">
+    <!-- Search View -->
+    <div id="search-view" role="tabpanel">
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Tìm kiếm Log ứng dụng</h5>
+          <div class="input-group mb-3">
+            <input
+              type="text"
+              class="form-control"
+              id="q"
+              placeholder="Nhập tên ứng dụng..."
+            />
+            <button class="btn btn-primary" type="button" onclick="search()">
+              Tìm kiếm
             </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="blocklist-tab" type="button" role="tab" onclick="showSubView('blocklist-view', 'app-management-view')">
-                Quản lý danh sách chặn
+            <button class="btn btn-danger" type="button" onclick="block()">
+              Chặn mục đã chọn
             </button>
-        </li>
-    </ul>
+          </div>
+          <span id="block-status" class="form-text"></span>
 
-    <!-- Tab Content -->
-    <div class="tab-content" id="appManTabsContent">
-        <!-- Search View -->
-        <div id="search-view" role="tabpanel">
-            <div class="card mt-3">
-                <div class="card-body">
-                    <h5 class="card-title">Tìm kiếm Log ứng dụng</h5>
-                    <div class="input-group mb-3">
-                        <input type="text" class="form-control" id="q" placeholder="Nhập tên ứng dụng...">
-                        <button class="btn btn-primary" type="button" onclick="search()">Tìm kiếm</button>
-                        <button class="btn btn-danger" type="button" onclick="block()">Chặn mục đã chọn</button>
-                    </div>
-                    <span id="block-status" class="form-text"></span>
-
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            Lọc theo thời gian
-                        </div>
-                        <div class="card-body">
-                            <div class="btn-group mb-3" role="group">
-                                <button type="button" class="btn btn-outline-secondary" onclick="search({since: '1 hour ago', until: 'now'})">1 giờ qua</button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="search({since: '24 hours ago', until: 'now'})">24 giờ qua</button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="search({since: '7 days ago', until: 'now'})">7 ngày qua</button>
-                            </div>
-                            <div class="row g-3 align-items-center">
-                                <div class="col-auto"><label class="col-form-label">Từ:</label></div>
-                                <div class="col-auto"><input type="date" class="form-control" id="since_date"></div>
-                                <div class="col-auto"><input type="time" class="form-control" id="since_time" step="60"></div>
-                                <div class="col-auto"><label class="col-form-label">Đến:</label></div>
-                                <div class="col-auto"><input type="date" class="form-control" id="until_date"></div>
-                                <div class="col-auto"><input type="time" class="form-control" id="until_time" step="60"></div>
-                                <div class="col-auto"><button class="btn btn-secondary" onclick="search()">Xác nhận</button></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h5 class="mt-4">Kết quả tìm kiếm</h5>
-                    <div id="results" class="list-group">
-                        <!-- Results will be dynamically inserted here -->
-                    </div>
+          <div class="card mt-3">
+            <div class="card-header">Lọc theo thời gian</div>
+            <div class="card-body">
+              <div class="btn-group mb-3" role="group">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  onclick="search({since: '1 hour ago', until: 'now'})"
+                >
+                  1 giờ qua
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  onclick="search({since: '24 hours ago', until: 'now'})"
+                >
+                  24 giờ qua
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  onclick="search({since: '7 days ago', until: 'now'})"
+                >
+                  7 ngày qua
+                </button>
+              </div>
+              <div class="row g-3 align-items-center">
+                <div class="col-auto">
+                  <label class="col-form-label">Từ:</label>
                 </div>
-            </div>
-        </div>
-
-        <!-- Blocklist View -->
-        <div id="blocklist-view" style="display: none;" role="tabpanel">
-            <div class="card mt-3">
-                <div class="card-body">
-                    <h5 class="card-title">Các ứng dụng bị chặn</h5>
-                    <div class="btn-toolbar" role="toolbar">
-                        <div class="btn-group me-2" role="group">
-                            <button type="button" class="btn btn-outline-secondary" onclick="unblockSelected()">Bỏ chặn mục đã chọn</button>
-                            <button type="button" class="btn btn-danger" onclick="clearBlocklist()">Xóa toàn bộ</button>
-                        </div>
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary" onclick="saveBlocklist()">Lưu danh sách</button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('load-input').click()">Tải lên danh sách</button>
-                        </div>
-                    </div>
-                    <input type="file" id="load-input" style="display: none" onchange="loadBlocklistFile(event)"/>
-                    <span id="unblock-status" class="form-text"></span>
-                    <div id="blocklist-items" class="list-group mt-3">
-                        <!-- Blocklist items will be dynamically inserted here -->
-                    </div>
+                <div class="col-auto">
+                  <input type="date" class="form-control" id="since_date" />
                 </div>
+                <div class="col-auto">
+                  <input
+                    type="time"
+                    class="form-control"
+                    id="since_time"
+                    step="60"
+                  />
+                </div>
+                <div class="col-auto">
+                  <label class="col-form-label">Đến:</label>
+                </div>
+                <div class="col-auto">
+                  <input type="date" class="form-control" id="until_date" />
+                </div>
+                <div class="col-auto">
+                  <input
+                    type="time"
+                    class="form-control"
+                    id="until_time"
+                    step="60"
+                  />
+                </div>
+                <div class="col-auto">
+                  <button class="btn btn-secondary" onclick="search()">
+                    Xác nhận
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <h5 class="mt-4">Kết quả tìm kiếm</h5>
+          <div id="results" class="list-group">
+            <!-- Results will be dynamically inserted here -->
+          </div>
         </div>
+      </div>
     </div>
+
+    <!-- Blocklist View -->
+    <div id="blocklist-view" style="display: none" role="tabpanel">
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Các ứng dụng bị chặn</h5>
+          <div class="btn-toolbar" role="toolbar">
+            <div class="btn-group me-2" role="group">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                onclick="unblockSelected()"
+              >
+                Bỏ chặn mục đã chọn
+              </button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                onclick="clearBlocklist()"
+              >
+                Xóa toàn bộ
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                onclick="saveBlocklist()"
+              >
+                Lưu danh sách
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                onclick="document.getElementById('load-input').click()"
+              >
+                Tải lên danh sách
+              </button>
+            </div>
+          </div>
+          <input
+            type="file"
+            id="load-input"
+            style="display: none"
+            onchange="loadBlocklistFile(event)"
+          />
+          <span id="unblock-status" class="form-text"></span>
+          <div id="blocklist-items" class="list-group mt-3">
+            <!-- Blocklist items will be dynamically inserted here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {{end}}

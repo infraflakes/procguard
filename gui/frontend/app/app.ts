@@ -49,7 +49,8 @@ async function search(range?: { since: string; until: string }): Promise<void> {
       })
       .join('');
   } else {
-    results.innerHTML = '<div class="list-group-item">Không tìm thấy kết quả.</div>';
+    results.innerHTML =
+      '<div class="list-group-item">Không tìm thấy kết quả.</div>';
   }
 }
 
@@ -86,14 +87,17 @@ async function loadBlocklist(): Promise<void> {
   const res = await fetch('/api/blocklist');
   const data = await res.json();
   if (data && data.length > 0) {
-    blocklistItems.innerHTML = data.map((app: string) => {
-      return `<label class="list-group-item">
+    blocklistItems.innerHTML = data
+      .map((app: string) => {
+        return `<label class="list-group-item">
                 <input class="form-check-input me-2" type="checkbox" name="blocked-app" value="${app}">
                 ${app}
               </label>`;
-    }).join('');
+      })
+      .join('');
   } else {
-    blocklistItems.innerHTML = '<div class="list-group-item">Hiện không có ứng dụng nào bị chặn.</div>';
+    blocklistItems.innerHTML =
+      '<div class="list-group-item">Hiện không có ứng dụng nào bị chặn.</div>';
   }
 }
 

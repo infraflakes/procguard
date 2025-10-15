@@ -35,13 +35,13 @@ jobs:
           node-version: '20'
 
       - name: Install frontend dependencies
-        run: cd gui/frontend && npm install
+        run: cd gui && npm install
 
       - name: Run frontend linter
-        run: cd gui/frontend && npm run lint
+        run: cd gui && npm run lint
 
       - name: Run frontend formatter check
-        run: cd gui/frontend && npm run format-check
+        run: cd gui && npm run format-check
 
       - name: Install golangci-lint
         run: |
