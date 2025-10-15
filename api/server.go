@@ -119,7 +119,9 @@ func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		srv.Logger.Printf("Error encoding response: %v", err)
+	}
 }
 
 func (srv *Server) registerRoutes(r *http.ServeMux) {

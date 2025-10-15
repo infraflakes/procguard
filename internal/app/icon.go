@@ -53,18 +53,17 @@ var (
 	modUser32  = windows.NewLazySystemDLL("user32.dll")
 	modGdi32   = windows.NewLazySystemDLL("gdi32.dll")
 
-	procExtractIconExW         = modShell32.NewProc("ExtractIconExW")
-	procDestroyIcon            = modUser32.NewProc("DestroyIcon")
-	procGetIconInfo            = modUser32.NewProc("GetIconInfo")
-	procGetSystemMetrics       = modUser32.NewProc("GetSystemMetrics")
-	procGetDC                  = modUser32.NewProc("GetDC")
-	procReleaseDC              = modUser32.NewProc("ReleaseDC")
-	procCreateCompatibleDC     = modGdi32.NewProc("CreateCompatibleDC")
-	procCreateCompatibleBitmap = modGdi32.NewProc("CreateCompatibleBitmap")
-	procSelectObject           = modGdi32.NewProc("SelectObject")
-	procGetDIBits              = modGdi32.NewProc("GetDIBits")
-	procDeleteObject           = modGdi32.NewProc("DeleteObject")
-	procDeleteDC               = modGdi32.NewProc("DeleteDC")
+	procExtractIconExW     = modShell32.NewProc("ExtractIconExW")
+	procDestroyIcon        = modUser32.NewProc("DestroyIcon")
+	procGetIconInfo        = modUser32.NewProc("GetIconInfo")
+	procGetSystemMetrics   = modUser32.NewProc("GetSystemMetrics")
+	procGetDC              = modUser32.NewProc("GetDC")
+	procReleaseDC          = modUser32.NewProc("ReleaseDC")
+	procCreateCompatibleDC = modGdi32.NewProc("CreateCompatibleDC")
+
+	procGetDIBits    = modGdi32.NewProc("GetDIBits")
+	procDeleteObject = modGdi32.NewProc("DeleteObject")
+	procDeleteDC     = modGdi32.NewProc("DeleteDC")
 )
 
 const (
@@ -114,18 +113,18 @@ func HICONToImage(hIcon syscall.Handle) (image.Image, error) {
 		return nil, fmt.Errorf("GetIconInfo failed: %w", err)
 	}
 	defer func() {
-		procDeleteObject.Call(uintptr(iconInfo.HbmColor))
-		procDeleteObject.Call(uintptr(iconInfo.HbmMask))
+		_, _, _ = procDeleteObject.Call(uintptr(iconInfo.HbmColor))
+		_, _, _ = procDeleteObject.Call(uintptr(iconInfo.HbmMask))
 	}()
 
 	width := GetSystemMetrics(SM_CXICON)
 	height := GetSystemMetrics(SM_CYICON)
 
 	screenDC, _, _ := procGetDC.Call(0)
-	defer procReleaseDC.Call(0, screenDC)
+	defer func() { _, _, _ = procReleaseDC.Call(0, screenDC) }()
 
 	memDC, _, _ := procCreateCompatibleDC.Call(screenDC)
-	defer procDeleteDC.Call(memDC)
+	defer func() { _, _, _ = procDeleteDC.Call(memDC) }()
 
 	var bmiColor BITMAPINFO
 	bmiColor.BmiHeader.BiSize = uint32(unsafe.Sizeof(bmiColor.BmiHeader))
@@ -177,7 +176,7 @@ func GetAppIconAsBase64(exePath string) (string, error) {
 	if len(largeIcons) == 0 {
 		return "", fmt.Errorf("no icons found")
 	}
-	defer procDestroyIcon.Call(uintptr(largeIcons[0]))
+	defer func() { _, _, _ = procDestroyIcon.Call(uintptr(largeIcons[0])) }()
 
 	img, err := HICONToImage(largeIcons[0])
 	if err != nil {
