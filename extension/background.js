@@ -48,6 +48,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       sendResponse({ status: 'ok' });
     }
+  } else if (request.type === 'log_web_metadata') {
+    if (port) {
+      port.postMessage(request);
+    }
   }
 });
 
@@ -76,6 +80,36 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (port) {
       console.log(`Logging URL: ${tab.url}`);
       port.postMessage({ type: 'log_url', payload: tab.url });
+
+      // Inject a script to get the title and favicon
+      chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: () => {
+          function getFaviconUrl() {
+            let faviconUrl = '';
+            const linkElements = document.head.querySelectorAll('link[rel*="icon"]');
+            for (const link of linkElements) {
+              if (link.href) {
+                faviconUrl = link.href;
+                break;
+              }
+            }
+            if (!faviconUrl) {
+              faviconUrl = `${window.location.origin}/favicon.ico`;
+            }
+            return faviconUrl;
+          }
+
+          chrome.runtime.sendMessage({
+            type: 'log_web_metadata',
+            payload: {
+              domain: window.location.hostname,
+              title: document.title,
+              iconUrl: getFaviconUrl()
+            }
+          });
+        }
+      });
     }
   }
 });

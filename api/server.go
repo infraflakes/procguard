@@ -124,6 +124,30 @@ func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (srv *Server) handleWebDetails(w http.ResponseWriter, r *http.Request) {
+	domain := r.URL.Query().Get("domain")
+	if domain == "" {
+		http.Error(w, "Missing domain", http.StatusBadRequest)
+		return
+	}
+
+	meta, err := data.GetWebMetadata(srv.db, domain)
+	if err != nil {
+		http.Error(w, "Failed to get web metadata", http.StatusInternalServerError)
+		return
+	}
+
+	if meta == nil {
+		// Return an empty response if no metadata is found
+		meta = &data.WebMetadata{Domain: domain}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(meta); err != nil {
+		srv.Logger.Printf("Error encoding response: %v", err)
+	}
+}
+
 func (srv *Server) registerRoutes(r *http.ServeMux) {
 	// Handlers
 	r.HandleFunc("/logout", srv.handleLogout)
@@ -157,4 +181,5 @@ func (srv *Server) registerRoutes(r *http.ServeMux) {
 	r.HandleFunc("/api/settings/autostart/enable", srv.handleEnableAutostart)
 	r.HandleFunc("/api/settings/autostart/disable", srv.handleDisableAutostart)
 	r.HandleFunc("/api/app-details", srv.handleAppDetails)
+	r.HandleFunc("/api/web-details", srv.handleWebDetails)
 }

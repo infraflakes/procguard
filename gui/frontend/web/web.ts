@@ -53,8 +53,8 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
   const data = await res.json();
   webLogItems.innerHTML = '';
   if (data && data.length > 0) {
-    webLogItems.innerHTML = data
-      .map((l: string[]) => {
+    const itemsHtml = await Promise.all(
+      data.map(async (l: string[]) => {
         const urlString = l[1];
         let domain = '';
         try {
@@ -63,12 +63,35 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
         } catch (e) {
           // Ignore invalid URLs
         }
-        return `<label class="list-group-item">
-                  <input class="form-check-input me-2" type="checkbox" name="web-log-domain" value="${domain}">
-                  ${l.join(' | ')}
-                </label>`;
+
+        let title = '';
+        let iconUrl = '';
+        if (domain) {
+          const webDetailsRes = await fetch(
+            `/api/web-details?domain=${domain}`
+          );
+          if (webDetailsRes.ok) {
+            const webDetails = await webDetailsRes.json();
+            title = webDetails.title;
+            iconUrl = webDetails.icon_url;
+          }
+        }
+
+        const otherInfo = l[0]; // Just the timestamp
+
+        return `<label class="list-group-item d-flex align-items-center">
+                <input class="form-check-input me-2" type="checkbox" name="web-log-domain" value="${domain}">
+                ${
+                  iconUrl
+                    ? `<img src="${iconUrl}" class="me-2" style="width: 24px; height: 24px;">`
+                    : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
+                }
+                <span class="fw-bold me-2">${title || domain}</span>
+                <span class="text-muted ms-auto">${otherInfo}</span>
+              </label>`;
       })
-      .join('');
+    );
+    webLogItems.innerHTML = itemsHtml.join('');
   } else {
     webLogItems.innerHTML =
       '<div class="list-group-item">Chưa có lịch sử truy cập web.</div>';

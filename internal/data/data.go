@@ -80,6 +80,13 @@ func createSchema(db *sql.DB) error {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs (timestamp);
+
+	CREATE TABLE IF NOT EXISTS web_metadata (
+		domain TEXT PRIMARY KEY,
+		title TEXT,
+		icon_url TEXT,
+		timestamp INTEGER NOT NULL
+	);
 	`
 	_, err := db.Exec(schema)
 	return err

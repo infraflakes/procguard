@@ -133,3 +133,22 @@ body {
   background-color: #e6e4d7;
   border-color: #e6e4d7;
 }
+
+#results {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.list-group-item {
+  background-color: #e6e4d7;
+}
+
+.form-control {
+  background-color: #e6e4d7;
+  color: #000;
+}
+
+.form-control:focus {
+  background-color: #e6e4d7;
+  color: #000;
+}
