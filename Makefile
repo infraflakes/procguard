@@ -12,7 +12,6 @@ GO_RUN=$(GO_CMD) run
 GO_FMT=$(GO_CMD) fmt
 GO_CLEAN=$(GO_CMD) clean
 GO_INSTALL=$(GO_CMD) install
-GO_TEST=$(GO_CMD) test
 
 # Binary name
 BINARY_WINDOWS_NAME=ProcGuardSvc.exe
@@ -20,7 +19,7 @@ BINARY_WINDOWS_NAME=ProcGuardSvc.exe
 # Build flags
 LDFLAGS = -ldflags="-s -w -X main.version=$(VERSION)"
 
-.PHONY: all build build-frontend run fmt clean test install
+.PHONY: all build build-frontend run fmt clean lint install
 
 all: build
 
@@ -43,8 +42,8 @@ fmt:
 	$(GO_FMT) ./...
 	cd gui && npm run format
 
-test:
-	$(GO_TEST) ./...
+lint:
+	GOOS=windows golangci-lint run
 
 clean:
 	@echo "Cleaning..."
