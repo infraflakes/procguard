@@ -87,9 +87,9 @@ func (s *Server) apiUnblock(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiBlockList(w http.ResponseWriter, r *http.Request) {
-	list, err := data.LoadApp()
+	list, err := data.LoadAppWithDetails(s.db)
 	if err != nil {
-		http.Error(w, "Failed to load blocklist", http.StatusInternalServerError)
+		http.Error(w, "Failed to load blocklist with details", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

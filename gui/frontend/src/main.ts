@@ -11,6 +11,9 @@ declare function loadAutostartStatus(): void;
 declare function loadBlocklist(): void;
 declare function loadWebBlocklist(): void;
 declare function loadWebLogs(): void;
+declare function showWebManagementView(): void;
+
+(window as any).isExtensionInstalled = false;
 
 const sinceDateInput = document.getElementById(
   'since_date'
@@ -24,13 +27,6 @@ const webSinceDateInput = document.getElementById(
 const webUntilDateInput = document.getElementById(
   'web_until_date'
 ) as HTMLInputElement;
-const extensionStatus = document.getElementById(
-  'extension-status'
-) as HTMLSpanElement;
-const installExtensionBtn = document.getElementById(
-  'install-extension-btn'
-) as HTMLButtonElement;
-const EXTENSION_ID = 'ilaocldmkhlifnikhinkmiepekpbefoh';
 
 function setDefaults(): void {
   const now = new Date();
@@ -44,27 +40,66 @@ function setDefaults(): void {
   if (webUntilDateInput) webUntilDateInput.value = today;
 }
 
-function checkExtension(): void {
-  if (typeof chrome !== 'undefined' && chrome.runtime) {
-    chrome.runtime.sendMessage(
-      EXTENSION_ID,
-      { message: 'is_installed' },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          if (extensionStatus) extensionStatus.textContent = 'Chưa cài đặt';
-          if (installExtensionBtn) installExtensionBtn.style.display = 'block';
-        } else {
-          if (response && extensionStatus) {
-            extensionStatus.textContent = `Đã cài đặt (v${response.version})`;
+function checkExtension(callback?: (success: boolean) => void): void {
+  console.log('Checking for extension...');
+
+  const observer = new MutationObserver((mutations, obs) => {
+    const idDiv = document.getElementById('procguard-extension-id');
+    if (idDiv && idDiv.textContent) {
+      console.log('Extension ID div found.');
+      const extensionId = idDiv.textContent;
+      console.log('Found extension ID:', extensionId);
+      chrome.runtime.sendMessage(
+        extensionId,
+        { message: 'is_installed' },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              'Error sending message to extension:',
+              chrome.runtime.lastError.message
+            );
+            (window as any).isExtensionInstalled = false;
+            if (callback) callback(false);
+          } else {
+            if (response && response.status === 'installed') {
+              console.log(
+                'Extension is installed. Registering ID with backend.'
+              );
+              (window as any).isExtensionInstalled = true;
+              // Always send the ID to the backend to ensure it's up-to-date.
+              fetch('/api/register-extension', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: extensionId }),
+              }).then(() => {
+                if (callback) callback(true);
+              });
+            }
           }
-          if (installExtensionBtn) installExtensionBtn.style.display = 'none';
         }
-      }
-    );
-  } else {
-    if (extensionStatus)
-      extensionStatus.textContent = 'Không phải trình duyệt dựa trên Chrome';
-  }
+      );
+      obs.disconnect(); // Stop observing once we've found the div.
+      return;
+    }
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+
+  // Stop observing after a timeout if the div is not found.
+  setTimeout(() => {
+    observer.disconnect();
+    const idDiv = document.getElementById('procguard-extension-id');
+    if (!idDiv) {
+      console.log('Extension ID div not found after timeout.');
+      (window as any).isExtensionInstalled = false;
+      if (callback) callback(false);
+    }
+  }, 3000); // Wait 3 seconds.
 }
 
 function showTopLevelView(viewName: string): void {
@@ -78,7 +113,7 @@ function showTopLevelView(viewName: string): void {
   if (viewName === 'app-management-view') {
     showSubView('search-view', 'app-management-view');
   } else if (viewName === 'web-management-view') {
-    showSubView('web-log-view', 'web-management-view');
+    showWebManagementView();
   } else if (viewName === 'settings-view') {
     loadAutostartStatus();
   }
@@ -130,5 +165,5 @@ function showSubView(viewName: string, parentView: string): void {
 document.addEventListener('DOMContentLoaded', () => {
   setDefaults();
   showTopLevelView('welcome-view');
-  checkExtension();
+  checkExtension(); // Initial check on page load.
 });

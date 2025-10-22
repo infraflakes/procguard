@@ -113,14 +113,36 @@ async function loadBlocklist(): Promise<void> {
   const res = await fetch('/api/blocklist');
   const data = await res.json();
   if (data && data.length > 0) {
-    blocklistItems.innerHTML = data
-      .map((app: string) => {
-        return `<label class="list-group-item">
-                <input class="form-check-input me-2" type="checkbox" name="blocked-app" value="${app}">
-                ${app}
+    const itemsHtml = await Promise.all(
+      data.map(async (app: { name: string; exe_path: string }) => {
+        let commercialName = '';
+        let icon = '';
+
+        if (app.exe_path) {
+          const appDetailsRes = await fetch(
+            `/api/app-details?path=${encodeURIComponent(app.exe_path)}`
+          );
+          if (appDetailsRes.ok) {
+            const appDetails = await appDetailsRes.json();
+            commercialName = appDetails.commercialName;
+            icon = appDetails.icon;
+          }
+        }
+
+        return `<label class="list-group-item d-flex align-items-center">
+                <input class="form-check-input me-2" type="checkbox" name="blocked-app" value="${
+                  app.name
+                }">
+                ${
+                  icon
+                    ? `<img src="data:image/png;base64,${icon}" class="me-2" style="width: 24px; height: 24px;">`
+                    : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
+                }
+                <span class="fw-bold me-2">${commercialName || app.name}</span>
               </label>`;
       })
-      .join('');
+    );
+    blocklistItems.innerHTML = itemsHtml.join('');
   } else {
     blocklistItems.innerHTML =
       '<div class="list-group-item">Hiện không có ứng dụng nào bị chặn.</div>';

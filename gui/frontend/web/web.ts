@@ -1,3 +1,45 @@
+declare function checkExtension(callback?: (success: boolean) => void): void;
+declare function showSubView(viewName: string, parentView: string): void;
+
+function showWebManagementView(): void {
+  const notInstalledView = document.getElementById(
+    'web-extension-not-installed-view'
+  );
+  const webManTabs = document.getElementById('webManTabs');
+  const webManTabsContent = document.getElementById('webManTabsContent');
+
+  if (notInstalledView && webManTabs && webManTabsContent) {
+    if ((window as any).isExtensionInstalled) {
+      notInstalledView.style.display = 'none';
+      webManTabs.style.display = 'flex';
+      webManTabsContent.style.display = 'block';
+      showSubView('web-log-view', 'web-management-view');
+    } else {
+      notInstalledView.style.display = 'block';
+      webManTabs.style.display = 'none';
+      webManTabsContent.style.display = 'none';
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const reloadBtn = document.getElementById(
+    'reload-extension-check-btn'
+  ) as HTMLButtonElement;
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', () => {
+      // Show a loading indicator
+      reloadBtn.textContent = 'Checking...';
+      reloadBtn.disabled = true;
+      checkExtension((success) => {
+        showWebManagementView();
+        reloadBtn.textContent = 'I have installed it, Reload';
+        reloadBtn.disabled = false;
+      });
+    });
+  }
+});
+
 async function searchWebLogs(range?: {
   since: string;
   until: string;
@@ -51,50 +93,52 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
 
   const res = await fetch(url);
   const data = await res.json();
-  webLogItems.innerHTML = '';
-  if (data && data.length > 0) {
-    const itemsHtml = await Promise.all(
-      data.map(async (l: string[]) => {
-        const urlString = l[1];
-        let domain = '';
-        try {
-          const url = new URL(urlString);
-          domain = url.hostname;
-        } catch (e) {
-          // Ignore invalid URLs
-        }
-
-        let title = '';
-        let iconUrl = '';
-        if (domain) {
-          const webDetailsRes = await fetch(
-            `/api/web-details?domain=${domain}`
-          );
-          if (webDetailsRes.ok) {
-            const webDetails = await webDetailsRes.json();
-            title = webDetails.title;
-            iconUrl = webDetails.icon_url;
+  if (webLogItems) {
+    webLogItems.innerHTML = '';
+    if (data && data.length > 0) {
+      const itemsHtml = await Promise.all(
+        data.map(async (l: string[]) => {
+          const urlString = l[1];
+          let domain = '';
+          try {
+            const url = new URL(urlString);
+            domain = url.hostname;
+          } catch (e) {
+            // Ignore invalid URLs
           }
-        }
 
-        const otherInfo = l[0]; // Just the timestamp
+          let title = '';
+          let iconUrl = '';
+          if (domain) {
+            const webDetailsRes = await fetch(
+              `/api/web-details?domain=${domain}`
+            );
+            if (webDetailsRes.ok) {
+              const webDetails = await webDetailsRes.json();
+              title = webDetails.title;
+              iconUrl = webDetails.icon_url;
+            }
+          }
 
-        return `<label class="list-group-item d-flex align-items-center">
-                <input class="form-check-input me-2" type="checkbox" name="web-log-domain" value="${domain}">
-                ${
-                  iconUrl
-                    ? `<img src="${iconUrl}" class="me-2" style="width: 24px; height: 24px;">`
-                    : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
-                }
-                <span class="fw-bold me-2">${title || domain}</span>
-                <span class="text-muted ms-auto">${otherInfo}</span>
-              </label>`;
-      })
-    );
-    webLogItems.innerHTML = itemsHtml.join('');
-  } else {
-    webLogItems.innerHTML =
-      '<div class="list-group-item">Chưa có lịch sử truy cập web.</div>';
+          const otherInfo = l[0]; // Just the timestamp
+
+          return `<label class="list-group-item d-flex align-items-center">
+                  <input class="form-check-input me-2" type="checkbox" name="web-log-domain" value="${domain}">
+                  ${
+                    iconUrl
+                      ? `<img src="${iconUrl}" class="me-2" style="width: 24px; height: 24px;">`
+                      : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
+                  }
+                  <span class="fw-bold me-2">${title || domain}</span>
+                  <span class="text-muted ms-auto">${otherInfo}</span>
+                </label>`;
+        })
+      );
+      webLogItems.innerHTML = itemsHtml.join('');
+    } else {
+      webLogItems.innerHTML =
+        '<div class="list-group-item">Chưa có lịch sử truy cập web.</div>';
+    }
   }
 }
 
@@ -132,24 +176,32 @@ async function loadWebBlocklist(): Promise<void> {
   ) as HTMLDivElement;
   const res = await fetch('/api/web-blocklist');
   const data = await res.json();
-  webBlocklistItems.innerHTML = '';
-  if (data && data.length > 0) {
-    webBlocklistItems.innerHTML = data
-      .map((domain: string) => {
-        return `
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-          <label class="flex-grow-1 mb-0">
-            <input class="form-check-input me-2" type="checkbox" name="blocked-website" value="${domain}">
-            ${domain}
-          </label>
-          <button class="btn btn-sm btn-outline-danger" onclick="removeWebBlocklist('${domain}')">&times;</button>
-        </div>
-      `;
-      })
-      .join('');
-  } else {
-    webBlocklistItems.innerHTML =
-      '<div class="list-group-item">Hiện không có trang web nào bị chặn.</div>';
+  if (webBlocklistItems) {
+    webBlocklistItems.innerHTML = '';
+    if (data && data.length > 0) {
+      webBlocklistItems.innerHTML = data
+        .map((item: { domain: string; title: string; icon_url: string }) => {
+          const { domain, title, icon_url } = item;
+          return `
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <label class="flex-grow-1 mb-0 d-flex align-items-center">
+              <input class="form-check-input me-2" type="checkbox" name="blocked-website" value="${domain}">
+              ${
+                icon_url
+                  ? `<img src="${icon_url}" class="me-2" style="width: 24px; height: 24px;">`
+                  : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
+              }
+              <span class="fw-bold me-2">${title || domain}</span>
+            </label>
+            <button class="btn btn-sm btn-outline-danger" onclick="removeWebBlocklist('${domain}')">&times;</button>
+          </div>
+        `;
+        })
+        .join('');
+    } else {
+      webBlocklistItems.innerHTML =
+        '<div class="list-group-item">Hiện không có trang web nào bị chặn.</div>';
+    }
   }
 }
 
@@ -182,10 +234,12 @@ async function unblockSelectedWebsites(): Promise<void> {
       body: JSON.stringify({ domain: domain }),
     });
   }
-  unblockWebStatus.innerText = 'Đã bỏ chặn: ' + selectedWebsites.join(', ');
-  setTimeout(() => {
-    unblockWebStatus.innerText = '';
-  }, 3000);
+  if (unblockWebStatus) {
+    unblockWebStatus.innerText = 'Đã bỏ chặn: ' + selectedWebsites.join(', ');
+    setTimeout(() => {
+      unblockWebStatus.innerText = '';
+    }, 3000);
+  }
   loadWebBlocklist(); // Refresh the list
 }
 
@@ -195,10 +249,12 @@ async function clearWebBlocklist(): Promise<void> {
   ) as HTMLSpanElement;
   if (confirm('Bạn có chắc chắn muốn xóa toàn bộ danh sách chặn web không?')) {
     await fetch('/api/web-blocklist/clear', { method: 'POST' });
-    unblockWebStatus.innerText = 'Đã xóa toàn bộ danh sách chặn web.';
-    setTimeout(() => {
-      unblockWebStatus.innerText = '';
-    }, 3000);
+    if (unblockWebStatus) {
+      unblockWebStatus.innerText = 'Đã xóa toàn bộ danh sách chặn web.';
+      setTimeout(() => {
+        unblockWebStatus.innerText = '';
+      }, 3000);
+    }
     loadWebBlocklist(); // Refresh the list
   }
 }
@@ -232,9 +288,11 @@ async function loadWebBlocklistFile(event: Event): Promise<void> {
     body: formData,
   });
 
-  unblockWebStatus.innerText = 'Đã tải lên và hợp nhất danh sách chặn web.';
-  setTimeout(() => {
-    unblockWebStatus.innerText = '';
-  }, 3000);
+  if (unblockWebStatus) {
+    unblockWebStatus.innerText = 'Đã tải lên và hợp nhất danh sách chặn web.';
+    setTimeout(() => {
+      unblockWebStatus.innerText = '';
+    }, 3000);
+  }
   loadWebBlocklist(); // Refresh the list
 }

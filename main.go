@@ -116,7 +116,7 @@ func HandleDefaultStartup() {
 	if err != nil {
 		data.GetLogger().Printf("Error getting executable path: %v", err)
 	}
-	if err := web.InstallNativeHost(exePath); err != nil {
+	if err := web.InstallNativeHost(exePath, "ilaocldmkhlifnikhinkmiepekpbefoh"); err != nil {
 		data.GetLogger().Printf("Failed to install native messaging host: %v\n", err)
 		// We don't want to block the main application from starting if this fails.
 	}

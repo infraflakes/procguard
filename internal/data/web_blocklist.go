@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +11,45 @@ import (
 )
 
 const webBlocklistFile = "web_blocklist.json"
+
+type WebBlocklistDetails struct {
+	Domain  string `json:"domain"`
+	Title   string `json:"title"`
+	IconURL string `json:"icon_url"`
+}
+
+// LoadWebWithDetails loads the web blocklist and enriches it with metadata from the database.
+func LoadWebWithDetails(db *sql.DB) ([]WebBlocklistDetails, error) {
+	domains, err := LoadWeb()
+	if err != nil {
+		return nil, fmt.Errorf("could not load web blocklist domains: %w", err)
+	}
+
+	if len(domains) == 0 {
+		return []WebBlocklistDetails{}, nil
+	}
+
+	details := make([]WebBlocklistDetails, 0, len(domains))
+	for _, domain := range domains {
+		meta, err := GetWebMetadata(db, domain)
+		if err != nil {
+			GetLogger().Printf("Error querying web metadata for %s: %v", domain, err)
+			details = append(details, WebBlocklistDetails{Domain: domain})
+			continue
+		}
+		if meta != nil {
+			details = append(details, WebBlocklistDetails{
+				Domain:  domain,
+				Title:   meta.Title,
+				IconURL: meta.IconURL,
+			})
+		} else {
+			details = append(details, WebBlocklistDetails{Domain: domain})
+		}
+	}
+
+	return details, nil
+}
 
 // LoadWeb reads the web blocklist file from the user's cache directory,
 // normalizes all entries to lowercase, and returns them as a slice of strings.

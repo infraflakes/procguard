@@ -12,29 +12,18 @@ import (
 )
 
 const (
-	ExtensionId = "ilaocldmkhlifnikhinkmiepekpbefoh"
-	HostName    = "com.nixuris.procguard"
+	HostName = "com.nixuris.procguard"
 )
 
 // InstallNativeHost sets up the native messaging host for Chrome.
-func InstallNativeHost(exePath string) error {
+func InstallNativeHost(exePath, extensionId string) error {
 	log := data.GetLogger()
 	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + HostName
 
-	// Check if the key already exists.
-	k, err := registry.OpenKey(registry.CURRENT_USER, keyPath, registry.QUERY_VALUE)
-	if err == nil {
-		if err := k.Close(); err != nil {
-			log.Printf("Failed to close registry key: %v", err)
-		}
-		log.Println("Native messaging host registry key already exists.")
-		return nil // Key already exists, no action needed.
-	}
-
-	log.Println("Installing native messaging host...")
+	log.Printf("Attempting to install native messaging host for extension ID: %s", extensionId)
 
 	// Create the registry key.
-	k, _, err = registry.CreateKey(registry.CURRENT_USER, keyPath, registry.SET_VALUE)
+	k, _, err := registry.CreateKey(registry.CURRENT_USER, keyPath, registry.SET_VALUE)
 	if err != nil {
 		log.Printf("Failed to create registry key: %v", err)
 		return fmt.Errorf("failed to create registry key: %w", err)
@@ -60,7 +49,7 @@ func InstallNativeHost(exePath string) error {
 
 	// Create the manifest file in the config directory.
 	manifestPath := filepath.Join(configDir, "native-host.json")
-	if err := CreateManifest(manifestPath, exePath, ExtensionId); err != nil {
+	if err := CreateManifest(manifestPath, exePath, extensionId); err != nil {
 		log.Printf("Failed to create manifest file: %v", err)
 		return fmt.Errorf("failed to create manifest file: %w", err)
 	}
@@ -99,4 +88,12 @@ func CreateManifest(manifestPath, exePath, extensionId string) error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(manifest)
+}
+
+func RegisterExtension(extensionId string) error {
+	exePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("error getting executable path: %w", err)
+	}
+	return InstallNativeHost(exePath, extensionId)
 }

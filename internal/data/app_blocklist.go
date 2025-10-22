@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,6 +12,43 @@ import (
 )
 
 const blockListFile = "blocklist.json"
+
+type AppDetails struct {
+	Name    string `json:"name"`
+	ExePath string `json:"exe_path"`
+}
+
+// LoadAppWithDetails loads the blocklist and enriches it with the latest exe_path from the database.
+func LoadAppWithDetails(db *sql.DB) ([]AppDetails, error) {
+	names, err := LoadApp()
+	if err != nil {
+		return nil, fmt.Errorf("could not load app blocklist names: %w", err)
+	}
+
+	if len(names) == 0 {
+		return []AppDetails{}, nil
+	}
+
+	details := make([]AppDetails, 0, len(names))
+	for _, name := range names {
+		var exePath string
+		// Find the most recent exe_path for the given process name.
+		err := db.QueryRow("SELECT exe_path FROM app_events WHERE process_name = ? AND exe_path IS NOT NULL ORDER BY start_time DESC LIMIT 1", name).Scan(&exePath)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// If no path is found, we can still return the name.
+				exePath = ""
+			} else {
+				// For other errors, log them but continue.
+				GetLogger().Printf("Error querying exe_path for %s: %v", name, err)
+				exePath = ""
+			}
+		}
+		details = append(details, AppDetails{Name: name, ExePath: exePath})
+	}
+
+	return details, nil
+}
 
 // LoadApp reads the blocklist file from the user's cache directory,
 // normalizes all entries to lowercase, and returns them as a slice of strings.

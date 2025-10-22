@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (response.ok) {
         closeUninstallModal();
-        alert('ProcGuard đã được gỡ cài đặt. Trình duyệt sẽ đóng.');
+        alert('ProcGuard đã được gỡ cài đặt. Trang sẽ đóng.');
         window.location.href = 'about:blank';
       } else {
         uninstallError.textContent =

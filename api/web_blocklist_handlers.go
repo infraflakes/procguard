@@ -10,9 +10,9 @@ import (
 )
 
 func (s *Server) handleGetWebBlocklist(w http.ResponseWriter, r *http.Request) {
-	list, err := data.LoadWeb()
+	list, err := data.LoadWebWithDetails(s.db)
 	if err != nil {
-		http.Error(w, "Failed to load web blocklist", http.StatusInternalServerError)
+		http.Error(w, "Failed to load web blocklist with details", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

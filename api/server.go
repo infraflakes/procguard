@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"procguard/internal/app"
 	"procguard/internal/data"
+	"procguard/internal/web"
 	"strings"
 	"sync"
 
@@ -148,6 +149,25 @@ func (srv *Server) handleWebDetails(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (srv *Server) handleRegisterExtension(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	srv.Logger.Printf("Received request to register extension with ID: %s", req.ID)
+
+	if err := web.RegisterExtension(req.ID); err != nil {
+		http.Error(w, "Failed to register extension", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (srv *Server) registerRoutes(r *http.ServeMux) {
 	// Handlers
 	r.HandleFunc("/logout", srv.handleLogout)
@@ -168,7 +188,7 @@ func (srv *Server) registerRoutes(r *http.ServeMux) {
 	// Web Blocklist API routes
 	r.HandleFunc("/api/web-blocklist", srv.handleGetWebBlocklist)
 	r.HandleFunc("/api/web-blocklist/add", srv.handleAddWebBlocklist)
-	r.HandleFunc("/api/web-blocklist/remove", srv.handleRemoveWebBlocklist)
+	r.HandleFunc("//api/web-blocklist/remove", srv.handleRemoveWebBlocklist)
 	r.HandleFunc("/api/web-blocklist/clear", srv.handleClearWebBlocklist)
 	r.HandleFunc("/api/web-blocklist/save", srv.handleSaveWebBlocklist)
 	r.HandleFunc("/api/web-blocklist/load", srv.handleLoadWebBlocklist)
@@ -182,4 +202,5 @@ func (srv *Server) registerRoutes(r *http.ServeMux) {
 	r.HandleFunc("/api/settings/autostart/disable", srv.handleDisableAutostart)
 	r.HandleFunc("/api/app-details", srv.handleAppDetails)
 	r.HandleFunc("/api/web-details", srv.handleWebDetails)
+	r.HandleFunc("/api/register-extension", srv.handleRegisterExtension)
 }
