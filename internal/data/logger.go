@@ -41,7 +41,7 @@ func (l *multiLogger) Close() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.file != nil {
-		l.file.Close()
+		_ = l.file.Close()
 		l.file = nil
 	}
 	l.db = nil // Prevent further writes to the database

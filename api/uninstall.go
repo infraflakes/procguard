@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	
 	"net/http"
 	"os"
 	"os/exec"
@@ -54,6 +54,11 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 
 		// Kill other ProcGuard processes
 		killOtherProcGuardProcesses(s.Logger)
+
+		if err := unblockAll(); err != nil {
+			// Log to stderr since the logger is closed
+			fmt.Fprintf(os.Stderr, "Failed to unblock all files: %v\n", err)
+		}
 
 		// Perform other cleanup tasks that don't involve file deletion
 		if err := daemon.RemoveAutostart(); err != nil {
@@ -107,7 +112,7 @@ rmdir /s /q "%s"
 del "%s"
 `, appDataDir, batchFilePath)
 
-	err := ioutil.WriteFile(batchFilePath, []byte(batchContent), 0644)
+	err := os.WriteFile(batchFilePath, []byte(batchContent), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write batch file: %w", err)
 	}

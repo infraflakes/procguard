@@ -1,66 +1,16 @@
-frontend/src/main.ts:16:5 - error TS2451: Cannot redeclare block-scoped variable 'isExtensionInstalled'.
-
-16 let isExtensionInstalled = false;
-       ~~~~~~~~~~~~~~~~~~~~
-
-  frontend/web/web.ts:1:13
-    1 declare let isExtensionInstalled: boolean;
-                  ~~~~~~~~~~~~~~~~~~~~
-    'isExtensionInstalled' was also declared here.
-
-frontend/web/web.ts:1:13 - error TS2451: Cannot redeclare block-scoped variable 'isExtensionInstalled'.
-
-1 declare let isExtensionInstalled: boolean;
-              ~~~~~~~~~~~~~~~~~~~~
-
-  frontend/src/main.ts:16:5
-    16 let isExtensionInstalled = false;
-           ~~~~~~~~~~~~~~~~~~~~
-    'isExtensionInstalled' was also declared here.
-
-frontend/web/web.ts:13:5 - error TS18047: 'notInstalledView' is possibly 'null'.
-
-13     notInstalledView.style.display = 'none';
-       ~~~~~~~~~~~~~~~~
-
-frontend/web/web.ts:14:5 - error TS18047: 'webManTabs' is possibly 'null'.
-
-14     webManTabs.style.display = 'flex';
-       ~~~~~~~~~~
-
-frontend/web/web.ts:15:5 - error TS18047: 'webManTabsContent' is possibly 'null'.
-
-15     webManTabsContent.style.display = 'block';
-       ~~~~~~~~~~~~~~~~~
-
-frontend/web/web.ts:18:5 - error TS18047: 'notInstalledView' is possibly 'null'.
-
-18     notInstalledView.style.display = 'block';
-       ~~~~~~~~~~~~~~~~
-
-frontend/web/web.ts:19:5 - error TS18047: 'webManTabs' is possibly 'null'.
-
-19     webManTabs.style.display = 'none';
-       ~~~~~~~~~~
-
-frontend/web/web.ts:20:5 - error TS18047: 'webManTabsContent' is possibly 'null'.
-
-20     webManTabsContent.style.display = 'none';
-       ~~~~~~~~~~~~~~~~~
-
-frontend/web/web.ts:30:17 - error TS2339: Property 'disabled' does not exist on type 'HTMLElement'.
-
-30       reloadBtn.disabled = true;
-                   ~~~~~~~~
-
-frontend/web/web.ts:34:19 - error TS2339: Property 'disabled' does not exist on type 'HTMLElement'.
-
-34         reloadBtn.disabled = false;
-                     ~~~~~~~~
-
-
-Found 10 errors in 2 files.
-
-Errors  Files
-     1  frontend/src/main.ts:16
-     9  frontend/web/web.ts:1
+  make lint
+GOOS=windows golangci-lint run
+internal/data/logger.go:44:15: Error return value of `l.file.Close` is not checked (errcheck)
+                l.file.Close()
+                            ^
+api/uninstall.go:6:2: SA1019: "io/ioutil" has been deprecated since Go 1.19: As of Go 1.16, the same functionality is now provided by package [io] or package [os], and those implementations should be preferred in new code. See the specific function documentation for details. (staticcheck)
+        "io/ioutil"
+        ^
+api/uninstall.go:155:6: func unblockAll is unused (unused)
+func unblockAll() error {
+     ^
+3 issues:
+* errcheck: 1
+* staticcheck: 1
+* unused: 1
+make: *** [Makefile:46: lint] Error 1
