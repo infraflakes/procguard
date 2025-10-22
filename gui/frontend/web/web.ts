@@ -26,16 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const reloadBtn = document.getElementById(
     'reload-extension-check-btn'
   ) as HTMLButtonElement;
+
   if (reloadBtn) {
     reloadBtn.addEventListener('click', () => {
-      // Show a loading indicator
-      reloadBtn.textContent = 'Checking...';
+      // Show a loading indicator and reload the page.
+
+      reloadBtn.textContent = 'Reloading...';
+
       reloadBtn.disabled = true;
-      checkExtension((success) => {
-        showWebManagementView();
-        reloadBtn.textContent = 'I have installed it, Reload';
-        reloadBtn.disabled = false;
-      });
+
+      location.reload();
     });
   }
 });
