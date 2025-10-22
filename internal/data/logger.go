@@ -14,12 +14,14 @@ type Logger interface {
 	Printf(format string, v ...interface{})
 	Fatalf(format string, v ...interface{})
 	Println(v ...interface{})
+	Close()
 }
 
 type multiLogger struct {
 	db     *sql.DB
 	file   *os.File
 	logger *log.Logger
+	mu     sync.Mutex
 }
 
 func (l *multiLogger) Printf(format string, v ...interface{}) {
@@ -35,15 +37,35 @@ func (l *multiLogger) Println(v ...interface{}) {
 	l.write("INFO", fmt.Sprintln(v...))
 }
 
-func (l *multiLogger) write(level, message string) {
-	// Write to database
-	_, err := l.db.Exec("INSERT INTO logs (timestamp, level, message) VALUES (?, ?, ?)", time.Now().Unix(), level, message)
-	if err != nil {
-		log.Printf("Failed to write log to database: %v", err)
-		log.Printf("[%s] %s", level, message)
+func (l *multiLogger) Close() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.file != nil {
+		l.file.Close()
+		l.file = nil
 	}
-	// Write to file
-	l.logger.Printf("[%s] %s", level, message)
+	l.db = nil // Prevent further writes to the database
+}
+
+func (l *multiLogger) write(level, message string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// Write to file first
+	if l.logger != nil {
+		l.logger.Printf("[%s] %s", level, message)
+	}
+
+	// Write to database
+	if l.db != nil {
+		_, err := l.db.Exec("INSERT INTO logs (timestamp, level, message) VALUES (?, ?, ?)", time.Now().Unix(), level, message)
+		if err != nil {
+			// If we can't write to the DB, log it to the file logger
+			if l.logger != nil {
+				l.logger.Printf("[ERROR] Failed to write log to database: %v", err)
+			}
+		}
+	}
 }
 
 var defaultLogger Logger
@@ -61,7 +83,7 @@ func NewLogger(db *sql.DB) {
 			log.Fatalf("Failed to open log file: %v", err)
 		}
 		logger := log.New(file, "", log.LstdFlags)
-		defaultLogger = &multiLogger{db: db, file: file, logger: logger}
+		defaultLogger = &multiLogger{db: db, file: file, logger: logger, mu: sync.Mutex{}}
 	})
 }
 

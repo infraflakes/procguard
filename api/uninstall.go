@@ -3,13 +3,17 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"procguard/internal/auth"
 	"procguard/internal/daemon"
 	"procguard/internal/data"
+	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/process"
@@ -40,48 +44,87 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
+		// Close the logger to release file handles
+		s.Logger.Close()
+		// Close the database connection
 		if err := s.db.Close(); err != nil {
-			s.Logger.Printf("Failed to close database: %v", err)
+			// We can't use the logger here, so just print to stderr
+			fmt.Fprintf(os.Stderr, "Failed to close database: %v\n", err)
 		}
-		time.Sleep(1 * time.Second)
+
+		// Kill other ProcGuard processes
 		killOtherProcGuardProcesses(s.Logger)
-		time.Sleep(2 * time.Second) // Give processes time to die
-		if err := unblockAll(); err != nil {
-			s.Logger.Printf("Failed to unblock all files: %v", err)
-		}
+
+		// Perform other cleanup tasks that don't involve file deletion
 		if err := daemon.RemoveAutostart(); err != nil {
-			s.Logger.Printf("Failed to remove autostart: %v", err)
+			// Log to stderr since the logger is closed
+			fmt.Fprintf(os.Stderr, "Failed to remove autostart: %v\n", err)
 		}
 		if err := removeNativeHost(); err != nil {
-			s.Logger.Printf("Failed to remove native host: %v", err)
+			fmt.Fprintf(os.Stderr, "Failed to remove native host: %v\n", err)
 		}
 
-		// Remove all application data, logs, and backups from LOCALAPPDATA
-		fmt.Println("Removing all application data...")
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData != "" {
-			appDataDir := filepath.Join(localAppData, appName)
-			if err := os.RemoveAll(appDataDir); err != nil {
-				s.Logger.Printf("Failed to remove app data directory: %v", err)
-			}
+		// Create and launch the self-deleting batch script
+		if err := selfDelete(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to initiate self-deletion: %v\n", err)
 		}
 
-		// Remove cache directory
-		cacheDir, err := os.UserCacheDir()
-		if err == nil {
-			procguardCacheDir := filepath.Join(cacheDir, "procguard")
-			if err := os.RemoveAll(procguardCacheDir); err != nil {
-				s.Logger.Printf("Failed to remove cache directory: %v", err)
-			}
-		}
-
+		// Exit the application
 		os.Exit(0)
 	}()
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
-		s.Logger.Printf("Error encoding response: %v", err)
+		// The logger is closed, so just print to stderr
+		fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
 	}
+}
+
+func selfDelete() error {
+	if runtime.GOOS != "windows" {
+		return fmt.Errorf("self-deletion is currently implemented only for Windows")
+	}
+
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData == "" {
+		return fmt.Errorf("could not find LOCALAPPDATA directory")
+	}
+	appDataDir := filepath.Join(localAppData, appName)
+
+	// Create a temporary batch file
+	tempDir := os.TempDir()
+	batchFileName := fmt.Sprintf("delete_procguard_%d.bat", time.Now().UnixNano())
+	batchFilePath := filepath.Join(tempDir, batchFileName)
+
+	// The batch script content:
+	// 1. Wait for the main process to exit.
+	// 2. Delete the application data directory.
+	// 3. Delete the batch file itself.
+	batchContent := fmt.Sprintf(`
+@echo off
+timeout /t 2 /nobreak > nul
+rmdir /s /q "%s"
+del "%s"
+`, appDataDir, batchFilePath)
+
+	err := ioutil.WriteFile(batchFilePath, []byte(batchContent), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write batch file: %w", err)
+	}
+
+	// Execute the batch file in a detached process
+	cmd := exec.Command("cmd.exe", "/C", batchFilePath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start batch process: %w", err)
+	}
+
+	return nil
 }
 
 func killOtherProcGuardProcesses(logger data.Logger) {
@@ -129,8 +172,6 @@ func unblockAll() error {
 }
 
 func removeNativeHost() error {
-	fmt.Println("Removing Native Messaging Host configuration...")
-
 	// Delete the registry key.
 	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + hostName
 	if err := registry.DeleteKey(registry.CURRENT_USER, keyPath); err != nil && err != registry.ErrNotExist {

@@ -4,31 +4,31 @@ let webBlocklist = [];
 
 function connect() {
   try {
-    console.log('Connecting to native host...');
+    
     port = chrome.runtime.connectNative(hostName);
 
     port.onMessage.addListener((msg) => {
-      console.log('Received message from native host:', msg);
+      
       if (msg.type === 'web_blocklist') {
         webBlocklist = msg.payload || [];
-        console.log('Updated web blocklist:', webBlocklist);
+        
       }
     });
 
     port.onDisconnect.addListener(() => {
       if (chrome.runtime.lastError) {
-        console.log(`Disconnected due to an error: ${chrome.runtime.lastError.message}`);
+        
       }
-      console.log('Disconnected from native host. Reconnecting in 5 seconds...');
+      
       setTimeout(connect, 5000);
     });
 
     // Request the blocklist on connection.
     port.postMessage({ type: 'get_web_blocklist' });
   } catch (err) {
-    console.error('Error connecting to native host:', err);
+    
     // Still try to reconnect
-    console.log('Reconnecting in 5 seconds...');
+    
     setTimeout(connect, 5000);
   }
 }
@@ -113,7 +113,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // Only log when the tab is fully loaded and has a valid URL.
   if (changeInfo.status === 'complete' && tab.url && (tab.url.startsWith('http') || tab.url.startsWith('https'))) {
     if (port) {
-      console.log(`Logging URL: ${tab.url}`);
+      
       port.postMessage({ type: 'log_url', payload: tab.url });
 
       // Inject a script to get the title and favicon

@@ -65,6 +65,7 @@ var DefaultWindows = []string{
 	"ShellHost.exe",
 	"taskhostw.exe",
 	"conhost.exe",
+	"OpenConsole.exe",
 	"dllhost.exe",
 	"LockApp.exe",
 	"CHXSmartScreen.exe",

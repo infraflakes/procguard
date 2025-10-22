@@ -20,8 +20,6 @@ func InstallNativeHost(exePath, extensionId string) error {
 	log := data.GetLogger()
 	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + HostName
 
-	log.Printf("Attempting to install native messaging host for extension ID: %s", extensionId)
-
 	// Create the registry key.
 	k, _, err := registry.CreateKey(registry.CURRENT_USER, keyPath, registry.SET_VALUE)
 	if err != nil {
@@ -60,7 +58,6 @@ func InstallNativeHost(exePath, extensionId string) error {
 		return fmt.Errorf("failed to set registry key value: %w", err)
 	}
 
-	log.Println("Native messaging host installed successfully.")
 	return nil
 }
 

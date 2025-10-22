@@ -57,7 +57,6 @@ func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.S
 		registerExtraRoutes(srv, r)
 	}
 
-	fmt.Println("GUI listening on http://" + addr)
 	if err := http.ListenAndServe(addr, srv.authMiddleware(r)); err != nil {
 		fmt.Fprintln(os.Stderr, "Error running server:", err)
 		os.Exit(1)
@@ -157,8 +156,6 @@ func (srv *Server) handleRegisterExtension(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-
-	srv.Logger.Printf("Received request to register extension with ID: %s", req.ID)
 
 	if err := web.RegisterExtension(req.ID); err != nil {
 		http.Error(w, "Failed to register extension", http.StatusInternalServerError)

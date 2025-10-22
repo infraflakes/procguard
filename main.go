@@ -3,7 +3,6 @@ package main
 //go:generate go run github.com/akavel/rsrc -manifest build/procguard.manifest -o build/cache/rsrc.syso
 
 import (
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -47,7 +46,7 @@ func main() {
 func runApi() {
 	const defaultPort = "58141"
 	addr := "127.0.0.1:" + defaultPort
-	fmt.Println("Starting API server on http://" + addr)
+
 	db, err := data.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
@@ -81,7 +80,7 @@ func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
 }
 
 func runDaemon() {
-	fmt.Println("Starting ProcGuard daemon...")
+
 	db, err := data.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
@@ -134,7 +133,6 @@ func HandleDefaultStartup() {
 	}
 
 	// No instance is running. This is the first instance.
-	fmt.Println("Starting ProcGuard services...")
 
 	// Start the API and daemon services in the background.
 	cmdApi := exec.Command(exePath, "run-api")

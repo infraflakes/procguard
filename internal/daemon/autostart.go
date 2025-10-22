@@ -36,8 +36,6 @@ func EnsureAutostart() (string, error) {
 		return destPath, nil // Entry already exists and is correct.
 	}
 
-	fmt.Println("Performing first-time setup for ProcGuard persistence...")
-
 	// Set the registry value to point to the persistent executable path.
 	if err := key.SetStringValue(appName, destPath); err != nil {
 		return destPath, fmt.Errorf("failed to set startup registry key: %w", err)
@@ -54,13 +52,12 @@ func EnsureAutostart() (string, error) {
 		}
 	}
 
-	fmt.Println("Successfully created startup registry entry.")
 	return destPath, nil
 }
 
 // RemoveAutostart removes the registry entry that starts the application on logon.
 func RemoveAutostart() error {
-	fmt.Println("Removing autostart registry entry...")
+
 	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
 	if err != nil {
 		if err == registry.ErrNotExist {
@@ -142,6 +139,5 @@ func copyExecutableToAppData() (string, error) {
 		return "", fmt.Errorf("error copying executable: %w", err)
 	}
 
-	fmt.Println("Executable backed up to", destPath)
 	return destPath, nil
 }

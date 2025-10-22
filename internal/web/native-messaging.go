@@ -34,7 +34,6 @@ type Response struct {
 // Run starts the native messaging host.
 func Run() {
 	log := data.GetLogger()
-	log.Println("Native messaging host started")
 
 	db, err := data.OpenDB()
 	if err != nil {
@@ -70,8 +69,6 @@ func Run() {
 			log.Printf("Error unmarshalling message: %v", err)
 			continue
 		}
-
-		log.Printf("Received message: Type=%s", req.Type)
 
 		// Handle the message based on its type.
 		switch req.Type {
@@ -169,7 +166,7 @@ func pollWebBlocklist() {
 		}
 
 		if !reflect.DeepEqual(list, lastBlocklist) {
-			log.Println("Web blocklist has changed, sending update to extension.")
+
 			lastBlocklist = list
 			resp := Response{
 				Type:    "web_blocklist",

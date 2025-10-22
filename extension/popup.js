@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         } catch (e) {
           // Handle invalid URLs
-          console.error("Invalid URL:", tabs[0].url);
+          
         }
       }
     });
