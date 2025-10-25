@@ -12,15 +12,16 @@ import (
 
 const webBlocklistFile = "web_blocklist.json"
 
+// WebBlocklistDetails represents the details of a blocked website.
 type WebBlocklistDetails struct {
 	Domain  string `json:"domain"`
 	Title   string `json:"title"`
 	IconURL string `json:"icon_url"`
 }
 
-// LoadWebWithDetails loads the web blocklist and enriches it with metadata from the database.
-func LoadWebWithDetails(db *sql.DB) ([]WebBlocklistDetails, error) {
-	domains, err := LoadWeb()
+// GetBlockedWebsitesWithDetails loads the web blocklist and enriches it with metadata from the database.
+func GetBlockedWebsitesWithDetails(db *sql.DB) ([]WebBlocklistDetails, error) {
+	domains, err := LoadWebBlocklist()
 	if err != nil {
 		return nil, fmt.Errorf("could not load web blocklist domains: %w", err)
 	}
@@ -51,10 +52,10 @@ func LoadWebWithDetails(db *sql.DB) ([]WebBlocklistDetails, error) {
 	return details, nil
 }
 
-// LoadWeb reads the web blocklist file from the user's cache directory,
-// normalizes all entries to lowercase, and returns them as a slice of strings.
-// If the file doesn't exist, it returns an empty list.
-func LoadWeb() ([]string, error) {
+// LoadWebBlocklist reads the web blocklist file from the user's cache directory.
+// It returns a slice of strings, with all entries normalized to lowercase for case-insensitive matching.
+// If the file doesn't exist, it returns an empty list, which is not considered an error.
+func LoadWebBlocklist() ([]string, error) {
 	cacheDir, _ := os.UserCacheDir()
 	p := filepath.Join(cacheDir, "procguard", webBlocklistFile)
 
@@ -79,9 +80,9 @@ func LoadWeb() ([]string, error) {
 	return list, nil
 }
 
-// SaveWeb writes the given list of strings to the web blocklist file in the
-// user's cache directory. It normalizes all entries to lowercase before saving.
-func SaveWeb(list []string) error {
+// SaveWebBlocklist writes the given list of strings to the web blocklist file.
+// It normalizes all entries to lowercase before saving to ensure consistency.
+func SaveWebBlocklist(list []string) error {
 	// Normalize all entries to lowercase to ensure consistency.
 	for i := range list {
 		list[i] = strings.ToLower(list[i])
@@ -99,31 +100,29 @@ func SaveWeb(list []string) error {
 	return os.WriteFile(p, b, 0600)
 }
 
-// AddWeb adds a domain to the web blocklist.
-func AddWeb(domain string) (string, error) {
-	list, err := LoadWeb()
+// AddWebsiteToBlocklist adds a domain to the web blocklist if it's not already there.
+func AddWebsiteToBlocklist(domain string) (string, error) {
+	list, err := LoadWebBlocklist()
 	if err != nil {
 		return "", err
 	}
 
 	lowerDomain := strings.ToLower(domain)
-	for _, v := range list {
-		if v == lowerDomain {
-			return "exists", nil
-		}
+	if slices.Contains(list, lowerDomain) {
+		return "exists", nil
 	}
 
 	list = append(list, lowerDomain)
-	if err := SaveWeb(list); err != nil {
+	if err := SaveWebBlocklist(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "added", nil
 }
 
-// RemoveWeb removes a domain from the web blocklist.
-func RemoveWeb(domain string) (string, error) {
-	list, err := LoadWeb()
+// RemoveWebsiteFromBlocklist removes a domain from the web blocklist.
+func RemoveWebsiteFromBlocklist(domain string) (string, error) {
+	list, err := LoadWebBlocklist()
 	if err != nil {
 		return "", err
 	}
@@ -135,14 +134,14 @@ func RemoveWeb(domain string) (string, error) {
 	}
 
 	list = slices.Delete(list, idx, idx+1)
-	if err := SaveWeb(list); err != nil {
+	if err := SaveWebBlocklist(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "removed", nil
 }
 
-// ClearWeb clears the web blocklist.
-func ClearWeb() error {
-	return SaveWeb([]string{})
+// ClearWebBlocklist removes all entries from the web blocklist.
+func ClearWebBlocklist() error {
+	return SaveWebBlocklist([]string{})
 }

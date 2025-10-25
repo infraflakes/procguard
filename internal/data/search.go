@@ -7,8 +7,10 @@ import (
 	"time"
 )
 
-// Search performs a search on the app_events table in the database.
-func Search(db *sql.DB, query, since, until string) ([][]string, error) {
+// SearchAppEvents performs a search on the app_events table in the database.
+// It returns a slice of string slices, where each inner slice represents a row with the following format:
+// [Time, ProcessName, PID, ParentName, ExePath]
+func SearchAppEvents(db *sql.DB, query, since, until string) ([][]string, error) {
 	var sinceTime, untilTime time.Time
 	var err error
 
@@ -26,7 +28,7 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 		}
 	}
 
-	// Build the query
+	// Build the SQL query dynamically based on the provided filters.
 	q := "SELECT process_name, pid, parent_process_name, exe_path, start_time, end_time FROM app_events WHERE 1=1"
 	args := make([]interface{}, 0)
 
@@ -36,14 +38,17 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 		args = append(args, likeQuery, likeQuery)
 	}
 
+	// The time-based filtering logic includes processes that were running within the specified time window.
 	if !sinceTime.IsZero() {
 		sinceUnix := sinceTime.Unix()
+		// A process is considered within the window if it ended after the 'since' time, or if it hasn't ended yet.
 		q += " AND (end_time IS NULL OR end_time >= ?)"
 		args = append(args, sinceUnix)
 	}
 
 	if !untilTime.IsZero() {
 		untilUnix := untilTime.Unix()
+		// A process is considered within the window if it started before the 'until' time.
 		q += " AND start_time <= ?"
 		args = append(args, untilUnix)
 	}
@@ -72,8 +77,6 @@ func Search(db *sql.DB, query, since, until string) ([][]string, error) {
 
 		startTimeStr := time.Unix(startTime.Int64, 0).Format("2006-01-02 15:04:05")
 
-		// Format the results into the structure the frontend expects
-		// [Time, ProcessName, PID, ParentName, ExePath]
 		results = append(results, []string{
 			startTimeStr,
 			processName,

@@ -12,26 +12,31 @@ import (
 	"time"
 )
 
-// WebMetadataPayload is the payload for the log_web_metadata message.
+const (
+	// pollInterval is the interval at which the web blocklist is polled for changes.
+	pollInterval = 2 * time.Second
+)
+
+// WebMetadataPayload is the payload for the log_web_metadata message from the extension.
 type WebMetadataPayload struct {
 	Domain  string `json:"domain"`
 	Title   string `json:"title"`
 	IconURL string `json:"iconUrl"`
 }
 
-// Request is the message received from the extension.
+// Request is a message received from the browser extension.
 type Request struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }
 
-// Response is the message sent to the extension.
+// Response is a message sent to the browser extension.
 type Response struct {
 	Type    string      `json:"type"`
 	Payload interface{} `json:"payload"`
 }
 
-// Run starts the native messaging host.
+// Run starts the native messaging host, which listens for messages from the browser extension.
 func Run() {
 	log := data.GetLogger()
 
@@ -45,9 +50,12 @@ func Run() {
 		}
 	}()
 
+	// Start a goroutine to poll the web blocklist and push updates to the extension.
 	go pollWebBlocklist()
 
+	// The main loop reads messages from stdin, which is connected to the browser extension.
 	for {
+		// The native messaging protocol prefixes each message with its length in bytes.
 		var length uint32
 		if err := binary.Read(os.Stdin, binary.LittleEndian, &length); err != nil {
 			if err == io.EOF {
@@ -73,7 +81,6 @@ func Run() {
 		// Handle the message based on its type.
 		switch req.Type {
 		case "ping":
-			// For now, just echo the request back.
 			var payload string
 			if err := json.Unmarshal(req.Payload, &payload); err != nil {
 				log.Printf("Error unmarshalling ping payload: %v", err)
@@ -90,7 +97,7 @@ func Run() {
 				log.Printf("Error unmarshalling log_url payload: %v", err)
 				continue
 			}
-			// Ignore logging the app's own GUI
+			// Ignore logging the app's own GUI.
 			if strings.HasPrefix(url, "http://127.0.0.1:58141") {
 				continue
 			}
@@ -103,7 +110,7 @@ func Run() {
 			}
 			writeWebMetadataToDatabase(db, &payload)
 		case "get_web_blocklist":
-			list, err := data.LoadWeb()
+			list, err := data.LoadWebBlocklist()
 			if err != nil {
 				log.Printf("Error loading web blocklist: %v", err)
 				continue
@@ -119,15 +126,16 @@ func Run() {
 				log.Printf("Error unmarshalling add_to_web_blocklist payload: %v", err)
 				continue
 			}
-			if _, err := data.AddWeb(domain); err != nil {
+			if _, err := data.AddWebsiteToBlocklist(domain); err != nil {
 				log.Printf("Error adding to web blocklist: %v", err)
 			}
 		default:
-			// Optionally handle unknown message types
+			// Optionally handle unknown message types.
 		}
 	}
 }
 
+// writeUrlToDatabase inserts a new web event into the database.
 func writeUrlToDatabase(db *sql.DB, url string) {
 	_, err := db.Exec("INSERT INTO web_events (url, timestamp) VALUES (?, ?)", url, time.Now().Unix())
 	if err != nil {
@@ -135,6 +143,7 @@ func writeUrlToDatabase(db *sql.DB, url string) {
 	}
 }
 
+// writeWebMetadataToDatabase inserts or updates web metadata in the database.
 func writeWebMetadataToDatabase(db *sql.DB, payload *WebMetadataPayload) {
 	// Use an UPSERT operation to either insert a new row or update the existing one for the given domain.
 	// This is useful to keep the metadata up-to-date.
@@ -152,21 +161,22 @@ func writeWebMetadataToDatabase(db *sql.DB, payload *WebMetadataPayload) {
 	}
 }
 
+// pollWebBlocklist periodically checks for changes in the web blocklist and sends updates to the extension.
 func pollWebBlocklist() {
 	log := data.GetLogger()
 	var lastBlocklist []string
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		list, err := data.LoadWeb()
+		list, err := data.LoadWebBlocklist()
 		if err != nil {
 			log.Printf("Error loading web blocklist for polling: %v", err)
 			continue
 		}
 
+		// Only send an update if the blocklist has changed.
 		if !reflect.DeepEqual(list, lastBlocklist) {
-
 			lastBlocklist = list
 			resp := Response{
 				Type:    "web_blocklist",
@@ -177,6 +187,7 @@ func pollWebBlocklist() {
 	}
 }
 
+// sendMessage sends a message to the browser extension.
 func sendMessage(resp Response) {
 	log := data.GetLogger()
 	b, err := json.Marshal(resp)
@@ -185,11 +196,13 @@ func sendMessage(resp Response) {
 		return
 	}
 
+	// The native messaging protocol requires that the message length be sent first.
 	if err := binary.Write(os.Stdout, binary.LittleEndian, uint32(len(b))); err != nil {
 		log.Printf("Error writing message length: %v", err)
 		return
 	}
 
+	// Then, the message body is sent.
 	if _, err := os.Stdout.Write(b); err != nil {
 		log.Printf("Error writing message body: %v", err)
 		return

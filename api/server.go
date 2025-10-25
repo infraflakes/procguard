@@ -16,7 +16,7 @@ import (
 	"github.com/bi-zone/go-fileversion"
 )
 
-// Server holds the dependencies for the GUI server.
+// Server holds the dependencies for the API server, such as the database connection and the logger.
 type Server struct {
 	Logger          data.Logger
 	IsAuthenticated bool
@@ -37,7 +37,7 @@ func NewServer() (*Server, error) {
 	}, nil
 }
 
-// StartWebServer configures and starts the blocking web server.
+// StartWebServer configures and starts the web server.
 func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.ServeMux)) {
 	srv, err := NewServer()
 	if err != nil {
@@ -63,14 +63,24 @@ func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.S
 	}
 }
 
-// authMiddleware protects all routes except login and assets
+// authMiddleware is a middleware that protects all routes except for a predefined list of public routes.
+// TODO: This list of public routes is hardcoded and could be made more maintainable.
 func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		srv.Mu.Lock()
 		localIsAuthenticated := srv.IsAuthenticated
 		srv.Mu.Unlock()
 
-		if !localIsAuthenticated && r.URL.Path != "/login" && r.URL.Path != "/api/has-password" && r.URL.Path != "/api/login" && r.URL.Path != "/api/set-password" && r.URL.Path != "/api/blocklist" && !strings.HasPrefix(r.URL.Path, "/src/") && !strings.HasPrefix(r.URL.Path, "/dist/") {
+		publicRoutes := []string{"/login", "/api/has-password", "/api/login", "/api/set-password", "/api/blocklist"}
+		isPublic := false
+		for _, route := range publicRoutes {
+			if r.URL.Path == route {
+				isPublic = true
+				break
+			}
+		}
+
+		if !localIsAuthenticated && !isPublic && !strings.HasPrefix(r.URL.Path, "/src/") && !strings.HasPrefix(r.URL.Path, "/dist/") {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
@@ -78,6 +88,7 @@ func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// handleAppDetails retrieves details for a given application, such as its commercial name and icon.
 func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
 	exePath := r.URL.Query().Get("path")
 	if exePath == "" {
@@ -85,7 +96,7 @@ func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get commercial name
+	// Get the commercial name from the executable's file version information.
 	info, err := fileversion.New(exePath)
 	var commercialName string
 	if err == nil {
@@ -98,15 +109,15 @@ func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If we still don't have a good name, use the filename without the extension.
+	// If a commercial name could not be found, use the filename without the extension as a fallback.
 	if commercialName == "" {
 		commercialName = strings.TrimSuffix(filepath.Base(exePath), filepath.Ext(exePath))
 	}
 
-	// Get icon
+	// Get the application's icon as a base64-encoded string.
 	icon, err := app.GetAppIconAsBase64(exePath)
 	if err != nil {
-		// Log the error but don't fail the request
+		// Log the error but don't fail the request, as the icon is not critical.
 		srv.Logger.Printf("Failed to get icon for %s: %v", exePath, err)
 	}
 
@@ -124,6 +135,7 @@ func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleWebDetails retrieves metadata for a given domain.
 func (srv *Server) handleWebDetails(w http.ResponseWriter, r *http.Request) {
 	domain := r.URL.Query().Get("domain")
 	if domain == "" {
@@ -138,7 +150,7 @@ func (srv *Server) handleWebDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if meta == nil {
-		// Return an empty response if no metadata is found
+		// If no metadata is found, return an empty response.
 		meta = &data.WebMetadata{Domain: domain}
 	}
 
@@ -148,6 +160,7 @@ func (srv *Server) handleWebDetails(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleRegisterExtension handles the registration of the browser extension.
 func (srv *Server) handleRegisterExtension(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ID string `json:"id"`
@@ -165,6 +178,7 @@ func (srv *Server) handleRegisterExtension(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 }
 
+// registerRoutes registers all the API routes for the server.
 func (srv *Server) registerRoutes(r *http.ServeMux) {
 	// Handlers
 	r.HandleFunc("/logout", srv.handleLogout)
@@ -173,14 +187,14 @@ func (srv *Server) registerRoutes(r *http.ServeMux) {
 	r.HandleFunc("/api/has-password", srv.handleHasPassword)
 	r.HandleFunc("/api/login", srv.handleLogin)
 	r.HandleFunc("/api/set-password", srv.handleSetPassword)
-	r.HandleFunc("/api/search", srv.apiSearch)
-	r.HandleFunc("/api/block", srv.apiBlock)
-	r.HandleFunc("/api/blocklist", srv.apiBlockList)
-	r.HandleFunc("/api/blocklist/clear", srv.apiClearBlocklist)
-	r.HandleFunc("/api/blocklist/save", srv.apiSaveBlocklist)
-	r.HandleFunc("/api/blocklist/load", srv.apiLoadBlocklist)
-	r.HandleFunc("/api/unblock", srv.apiUnblock)
-	r.HandleFunc("/api/uninstall", srv.apiUninstall)
+	r.HandleFunc("/api/search", srv.handleSearch)
+	r.HandleFunc("/api/block", srv.handleBlockApps)
+	r.HandleFunc("/api/blocklist", srv.handleGetAppBlocklist)
+	r.HandleFunc("/api/blocklist/clear", srv.handleClearAppBlocklist)
+	r.HandleFunc("/api/blocklist/save", srv.handleSaveAppBlocklist)
+	r.HandleFunc("/api/blocklist/load", srv.handleLoadAppBlocklist)
+	r.HandleFunc("/api/unblock", srv.handleUnblockApps)
+	r.HandleFunc("/api/uninstall", srv.handleUninstall)
 
 	// Web Blocklist API routes
 	r.HandleFunc("/api/web-blocklist", srv.handleGetWebBlocklist)

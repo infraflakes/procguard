@@ -11,16 +11,18 @@ import (
 	"time"
 )
 
-const blockListFile = "blocklist.json"
+const appBlocklistFile = "blocklist.json"
 
+// AppDetails represents the details of a blocked application.
 type AppDetails struct {
 	Name    string `json:"name"`
 	ExePath string `json:"exe_path"`
 }
 
-// LoadAppWithDetails loads the blocklist and enriches it with the latest exe_path from the database.
-func LoadAppWithDetails(db *sql.DB) ([]AppDetails, error) {
-	names, err := LoadApp()
+// GetBlockedAppsWithDetails loads the blocklist and enriches it with the latest executable path from the database.
+// This provides more context to the user in the UI.
+func GetBlockedAppsWithDetails(db *sql.DB) ([]AppDetails, error) {
+	names, err := LoadAppBlocklist()
 	if err != nil {
 		return nil, fmt.Errorf("could not load app blocklist names: %w", err)
 	}
@@ -32,14 +34,14 @@ func LoadAppWithDetails(db *sql.DB) ([]AppDetails, error) {
 	details := make([]AppDetails, 0, len(names))
 	for _, name := range names {
 		var exePath string
-		// Find the most recent exe_path for the given process name.
+		// Find the most recent exe_path for the given process name to show the user the location of the blocked app.
 		err := db.QueryRow("SELECT exe_path FROM app_events WHERE process_name = ? AND exe_path IS NOT NULL ORDER BY start_time DESC LIMIT 1", name).Scan(&exePath)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				// If no path is found, we can still return the name.
+				// If no path is found in the database, we can still return the name.
 				exePath = ""
 			} else {
-				// For other errors, log them but continue.
+				// For other errors, log them but continue building the list.
 				GetLogger().Printf("Error querying exe_path for %s: %v", name, err)
 				exePath = ""
 			}
@@ -50,17 +52,16 @@ func LoadAppWithDetails(db *sql.DB) ([]AppDetails, error) {
 	return details, nil
 }
 
-// LoadApp reads the blocklist file from the user's cache directory,
-// normalizes all entries to lowercase, and returns them as a slice of strings.
-// If the file doesn't exist, it returns an empty list.
-func LoadApp() ([]string, error) {
+// LoadAppBlocklist reads the blocklist file from the user's cache directory.
+// It returns a slice of strings, with all entries normalized to lowercase for case-insensitive matching.
+// If the file doesn't exist, it returns an empty list, which is not considered an error.
+func LoadAppBlocklist() ([]string, error) {
 	cacheDir, _ := os.UserCacheDir()
-	p := filepath.Join(cacheDir, "procguard", blockListFile)
+	p := filepath.Join(cacheDir, "procguard", appBlocklistFile)
 
-	// If the blocklist file doesn't exist, return an empty list.
 	b, err := os.ReadFile(p)
 	if os.IsNotExist(err) {
-		return nil, nil
+		return nil, nil // File not existing is not an error, just an empty list.
 	}
 	if err != nil {
 		return nil, err
@@ -71,17 +72,17 @@ func LoadApp() ([]string, error) {
 		return nil, fmt.Errorf("failed to unmarshal blocklist: %w", err)
 	}
 
-	// Normalize all entries to lowercase for case-insensitive comparison.
+	// Normalize all entries to lowercase to ensure case-insensitive comparison.
 	for i := range list {
 		list[i] = strings.ToLower(list[i])
 	}
 	return list, nil
 }
 
-// SaveApp writes the given list of strings to the blocklist file in the
-// user's cache directory. It normalizes all entries to lowercase before saving.
+// SaveAppBlocklist writes the given list of strings to the blocklist file.
+// It normalizes all entries to lowercase before saving to ensure consistency.
 // It also sets appropriate file permissions to secure the file.
-func SaveApp(list []string) error {
+func SaveAppBlocklist(list []string) error {
 	// Normalize all entries to lowercase to ensure consistency.
 	for i := range list {
 		list[i] = strings.ToLower(list[i])
@@ -89,9 +90,8 @@ func SaveApp(list []string) error {
 
 	cacheDir, _ := os.UserCacheDir()
 	_ = os.MkdirAll(filepath.Join(cacheDir, "procguard"), 0755)
-	p := filepath.Join(cacheDir, "procguard", blockListFile)
+	p := filepath.Join(cacheDir, "procguard", appBlocklistFile)
 
-	// Marshal the list to JSON with indentation for readability.
 	b, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal blocklist: %w", err)
@@ -104,31 +104,29 @@ func SaveApp(list []string) error {
 	return platformLock(p) // build-tag dispatch
 }
 
-// AddApp adds a program to the blocklist.
-func AddApp(name string) (string, error) {
-	list, err := LoadApp()
+// AddAppToBlocklist adds a program to the blocklist if it's not already there.
+func AddAppToBlocklist(name string) (string, error) {
+	list, err := LoadAppBlocklist()
 	if err != nil {
 		return "", err
 	}
 
 	lowerName := strings.ToLower(name)
-	for _, v := range list {
-		if v == lowerName {
-			return "exists", nil
-		}
+	if slices.Contains(list, lowerName) {
+		return "exists", nil
 	}
 
 	list = append(list, lowerName)
-	if err := SaveApp(list); err != nil {
+	if err := SaveAppBlocklist(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "added", nil
 }
 
-// RemoveApp removes a program from the blocklist.
-func RemoveApp(name string) (string, error) {
-	list, err := LoadApp()
+// RemoveAppFromBlocklist removes a program from the blocklist.
+func RemoveAppFromBlocklist(name string) (string, error) {
+	list, err := LoadAppBlocklist()
 	if err != nil {
 		return "", err
 	}
@@ -140,21 +138,21 @@ func RemoveApp(name string) (string, error) {
 	}
 
 	list = slices.Delete(list, idx, idx+1)
-	if err := SaveApp(list); err != nil {
+	if err := SaveAppBlocklist(list); err != nil {
 		return "", fmt.Errorf("save: %w", err)
 	}
 
 	return "removed", nil
 }
 
-// ClearApp clears the blocklist.
-func ClearApp() error {
-	return SaveApp([]string{})
+// ClearAppBlocklist removes all entries from the blocklist.
+func ClearAppBlocklist() error {
+	return SaveAppBlocklist([]string{})
 }
 
-// SaveAppToFile saves the current blocklist to a file.
-func SaveAppToFile(path string) error {
-	list, err := LoadApp()
+// ExportAppBlocklist saves the current blocklist to a user-specified file.
+func ExportAppBlocklist(path string) error {
+	list, err := LoadAppBlocklist()
 	if err != nil {
 		return err
 	}
@@ -175,8 +173,8 @@ func SaveAppToFile(path string) error {
 	return nil
 }
 
-// LoadAppFromFile loads a blocklist from a file, merging it with the existing list.
-func LoadAppFromFile(path string) error {
+// ImportAppBlocklist loads a blocklist from a file and merges it with the existing blocklist.
+func ImportAppBlocklist(path string) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("load: %w", err)
@@ -187,6 +185,7 @@ func LoadAppFromFile(path string) error {
 		Blocked []string `json:"blocked"`
 	}
 
+	// The imported file can be a simple list of strings or a previously exported file.
 	err = json.Unmarshal(content, &newEntries)
 	if err != nil {
 		err2 := json.Unmarshal(content, &savedList)
@@ -196,7 +195,7 @@ func LoadAppFromFile(path string) error {
 		newEntries = savedList.Blocked
 	}
 
-	existingList, err := LoadApp()
+	existingList, err := LoadAppBlocklist()
 	if err != nil {
 		return err
 	}
@@ -207,5 +206,5 @@ func LoadAppFromFile(path string) error {
 		}
 	}
 
-	return SaveApp(existingList)
+	return SaveAppBlocklist(existingList)
 }

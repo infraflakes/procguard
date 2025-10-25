@@ -10,7 +10,9 @@ import (
 	"time"
 )
 
-func (s *Server) apiBlock(w http.ResponseWriter, r *http.Request) {
+// handleBlockApps adds one or more applications to the blocklist.
+// It expects a JSON request with a `names` field containing a list of application names.
+func (s *Server) handleBlockApps(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Names []string `json:"names"`
 	}
@@ -19,7 +21,7 @@ func (s *Server) apiBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := data.LoadApp()
+	list, err := data.LoadAppBlocklist()
 	if err != nil {
 		http.Error(w, "Failed to load blocklist", http.StatusInternalServerError)
 		return
@@ -29,15 +31,10 @@ func (s *Server) apiBlock(w http.ResponseWriter, r *http.Request) {
 		lowerName := strings.ToLower(name)
 		if !slices.Contains(list, lowerName) {
 			list = append(list, lowerName)
-			// Block the executable file.
-			//if err := data.BlockExecutable(lowerName); err != nil {
-			//	s.Logger.Printf("Failed to block executable %s: %v", lowerName, err)
-			//	// Continue trying to block other executables
-			//}
 		}
 	}
 
-	if err := data.SaveApp(list); err != nil {
+	if err := data.SaveAppBlocklist(list); err != nil {
 		http.Error(w, "Failed to save blocklist", http.StatusInternalServerError)
 		return
 	}
@@ -48,7 +45,9 @@ func (s *Server) apiBlock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) apiUnblock(w http.ResponseWriter, r *http.Request) {
+// handleUnblockApps removes one or more applications from the blocklist.
+// It expects a JSON request with a `names` field containing a list of application names.
+func (s *Server) handleUnblockApps(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Names []string `json:"names"`
 	}
@@ -57,7 +56,7 @@ func (s *Server) apiUnblock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := data.LoadApp()
+	list, err := data.LoadAppBlocklist()
 	if err != nil {
 		http.Error(w, "Failed to load blocklist", http.StatusInternalServerError)
 		return
@@ -68,14 +67,9 @@ func (s *Server) apiUnblock(w http.ResponseWriter, r *http.Request) {
 		list = slices.DeleteFunc(list, func(item string) bool {
 			return item == lowerName
 		})
-		// Unblock the executable file.
-		//if err := data.UnblockExecutable(lowerName); err != nil {
-		//	s.Logger.Printf("Failed to unblock executable %s: %v", lowerName, err)
-		//	// Continue trying to unblock other executables
-		//}
 	}
 
-	if err := data.SaveApp(list); err != nil {
+	if err := data.SaveAppBlocklist(list); err != nil {
 		http.Error(w, "Failed to save blocklist", http.StatusInternalServerError)
 		return
 	}
@@ -86,8 +80,9 @@ func (s *Server) apiUnblock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) apiBlockList(w http.ResponseWriter, r *http.Request) {
-	list, err := data.LoadAppWithDetails(s.db)
+// handleGetAppBlocklist returns the list of blocked applications with their details.
+func (s *Server) handleGetAppBlocklist(w http.ResponseWriter, r *http.Request) {
+	list, err := data.GetBlockedAppsWithDetails(s.db)
 	if err != nil {
 		http.Error(w, "Failed to load blocklist with details", http.StatusInternalServerError)
 		return
@@ -98,16 +93,18 @@ func (s *Server) apiBlockList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) apiClearBlocklist(w http.ResponseWriter, r *http.Request) {
-	if err := data.ClearApp(); err != nil {
+// handleClearAppBlocklist removes all applications from the blocklist.
+func (s *Server) handleClearAppBlocklist(w http.ResponseWriter, r *http.Request) {
+	if err := data.ClearAppBlocklist(); err != nil {
 		http.Error(w, "Failed to clear blocklist", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) apiSaveBlocklist(w http.ResponseWriter, r *http.Request) {
-	list, err := data.LoadApp()
+// handleSaveAppBlocklist saves the current application blocklist to a file for export.
+func (s *Server) handleSaveAppBlocklist(w http.ResponseWriter, r *http.Request) {
+	list, err := data.LoadAppBlocklist()
 	if err != nil {
 		http.Error(w, "Failed to get blocklist", http.StatusInternalServerError)
 		return
@@ -131,7 +128,8 @@ func (s *Server) apiSaveBlocklist(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) apiLoadBlocklist(w http.ResponseWriter, r *http.Request) {
+// handleLoadAppBlocklist loads an application blocklist from an uploaded file and merges it with the existing blocklist.
+func (s *Server) handleLoadAppBlocklist(w http.ResponseWriter, r *http.Request) {
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Failed to get file from form", http.StatusBadRequest)
@@ -164,7 +162,7 @@ func (s *Server) apiLoadBlocklist(w http.ResponseWriter, r *http.Request) {
 		newEntries = savedList.Blocked
 	}
 
-	existingList, err := data.LoadApp()
+	existingList, err := data.LoadAppBlocklist()
 	if err != nil {
 		http.Error(w, "Failed to load existing blocklist", http.StatusInternalServerError)
 		return
@@ -176,7 +174,7 @@ func (s *Server) apiLoadBlocklist(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := data.SaveApp(existingList); err != nil {
+	if err := data.SaveAppBlocklist(existingList); err != nil {
 		http.Error(w, "Failed to save merged blocklist", http.StatusInternalServerError)
 		return
 	}

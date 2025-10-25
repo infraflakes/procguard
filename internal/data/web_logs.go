@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// GetWebLogs retrieves web logs from the database within a given time range.
+// It returns a slice of string slices, where each inner slice represents a row with the following format:
+// [Timestamp, URL]
 func GetWebLogs(db *sql.DB, since, until string) ([][]string, error) {
 	var sinceTime, untilTime time.Time
 	var err error
@@ -23,6 +26,7 @@ func GetWebLogs(db *sql.DB, since, until string) ([][]string, error) {
 		}
 	}
 
+	// Build the SQL query dynamically based on the provided time filters.
 	q := "SELECT url, timestamp FROM web_events WHERE 1=1"
 	args := make([]interface{}, 0)
 

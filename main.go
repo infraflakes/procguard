@@ -18,58 +18,78 @@ import (
 	"time"
 )
 
+const (
+	// defaultPort is the port used by the web server.
+	defaultPort = "58141"
+	// chromeExtensionID is the ID of the Chrome extension that communicates with the native messaging host.
+	chromeExtensionID = "ilaocldmkhlifnikhinkmiepekpbefoh"
+
+	// command line arguments to run specific parts of the application.
+	cmdRunAPI    = "run-api"
+	cmdRunDaemon = "run-daemon"
+)
+
+// main is the entry point of the application. It determines the execution mode based on command-line arguments.
 func main() {
-	// When launched by Chrome, the first argument is the extension's origin.
+	// When the application is launched by Chrome as a native messaging host,
+	// the first argument is the origin of the extension.
 	if len(os.Args) > 1 && strings.HasPrefix(os.Args[1], "chrome-extension://") {
-		db, err := data.OpenDB()
-		if err != nil {
-			log.Fatalf("Failed to open database: %v", err)
-		}
-		data.NewLogger(db)
-		web.Run()
+		runNativeMessagingHost()
 		return
 	}
 
-	// If no command-line arguments are provided, this is a default run (e.g., double-click).
+	// If there are no arguments, start the main GUI application.
+	// Otherwise, run the specified command.
 	if len(os.Args) == 1 {
-		HandleDefaultStartup()
-	} else if len(os.Args) > 1 {
+		startGUIApplication()
+	} else {
 		switch os.Args[1] {
-		case "run-api":
-			runApi()
-		case "run-daemon":
-			runDaemon()
+		case cmdRunAPI:
+			startAPIServer()
+		case cmdRunDaemon:
+			startDaemonService()
 		}
 	}
 }
 
-func runApi() {
-	const defaultPort = "58141"
+// runNativeMessagingHost starts the application in native messaging host mode,
+// allowing communication with the browser extension.
+func runNativeMessagingHost() {
+	db, err := data.OpenDB()
+	if err != nil {
+		log.Fatalf("Native messaging host failed to open database: %v", err)
+	}
+	data.NewLogger(db)
+	web.Run()
+}
+
+// startAPIServer initializes and starts the API server.
+func startAPIServer() {
 	addr := "127.0.0.1:" + defaultPort
 
 	db, err := data.InitDB()
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to initialize database for API server: %v", err)
 	}
 	data.NewLogger(db)
 	api.StartWebServer(addr, registerWebRoutes)
 }
 
+// registerWebRoutes sets up the routes for the web server.
 func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
-	// Create a sub-filesystem rooted at the "frontend" directory.
+	// Create a sub-filesystem for the frontend assets.
 	subFS, err := fs.Sub(gui.FrontendFS, "frontend")
 	if err != nil {
 		log.Fatalf("Failed to create sub-filesystem for frontend: %v", err)
 	}
 
-	// Create a file server for our static assets from the sub-filesystem.
 	staticFS := http.FileServer(http.FS(subFS))
 
-	// Serve the new static file directories.
+	// Serve static assets.
 	r.Handle("/dist/", staticFS)
 	r.Handle("/src/", staticFS)
 
-	// Keep the existing template rendering handlers.
+	// Serve application pages.
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		gui.HandleIndex(&srv.Mu, srv.IsAuthenticated, srv.Logger, w, r)
 	})
@@ -79,72 +99,59 @@ func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
 	r.HandleFunc("/ping", gui.HandlePing)
 }
 
-func runDaemon() {
-
+// startDaemonService initializes and starts the background daemon.
+func startDaemonService() {
 	db, err := data.InitDB()
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to initialize database for daemon: %v", err)
 	}
 	data.NewLogger(db)
-	appLogger := data.GetLogger()
 	defer func() {
 		if err := db.Close(); err != nil {
-			appLogger.Printf("Failed to close database: %v", err)
+			data.GetLogger().Printf("Failed to close database in daemon: %v", err)
 		}
 	}()
 
-	daemon.Start(appLogger, db)
-	// Keep the main goroutine alive
+	daemon.StartDaemon(data.GetLogger(), db)
+	// Keep the daemon running indefinitely.
 	select {}
 }
 
-// HandleDefaultStartup implements the main startup logic for GUI mode on Windows.
-func HandleDefaultStartup() {
+// startGUIApplication handles the main startup logic for the GUI application.
+func startGUIApplication() {
 	db, err := data.InitDB()
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to initialize database for GUI: %v", err)
 	}
 	data.NewLogger(db)
 
-	// The autostart logic has been moved to a user-initiated action in the GUI.
-
-	// Set up the native messaging host using the current executable's path.
-	// Note: This means the original executable must be kept.
-	// This will be improved when a proper installer is built.
 	exePath, err := os.Executable()
 	if err != nil {
 		data.GetLogger().Printf("Error getting executable path: %v", err)
-	}
-	if err := web.InstallNativeHost(exePath, "ilaocldmkhlifnikhinkmiepekpbefoh"); err != nil {
-		data.GetLogger().Printf("Failed to install native messaging host: %v\n", err)
-		// We don't want to block the main application from starting if this fails.
+		// We can continue, but some features might not work.
 	}
 
-	const defaultPort = "58141"
+	// This setup is necessary for the browser extension to communicate with the application.
+	if err := web.InstallNativeHost(exePath, chromeExtensionID); err != nil {
+		data.GetLogger().Printf("Failed to install native messaging host: %v\n", err)
+		// This is not a fatal error, the application can still run without the extension.
+	}
+
 	guiAddress := "127.0.0.1:" + defaultPort
 	guiUrl := "http://" + guiAddress
 
-	// Check if a server is already running
-	_, err = http.Get(guiUrl + "/ping")
-	if err == nil {
-		// Instance is already running. Just open the browser and exit.
+	// Check if an instance of the application is already running.
+	if isAppRunning(guiUrl) {
 		openBrowser(guiUrl)
 		return
 	}
 
-	// No instance is running. This is the first instance.
-
-	// Start the API and daemon services in the background.
-	cmdApi := exec.Command(exePath, "run-api")
-	cmdApi.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW
-	if err := cmdApi.Start(); err != nil {
+	// If no instance is running, start the API and daemon services as background processes.
+	if err := startBackgroundService(exePath, cmdRunAPI); err != nil {
 		data.GetLogger().Printf("Error starting API service: %v", err)
 		return
 	}
-
-	cmdDaemon := exec.Command(exePath, "run-daemon")
-	cmdDaemon.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW
-	if err := cmdDaemon.Start(); err != nil {
+	if err := startBackgroundService(exePath, cmdRunDaemon); err != nil {
 		data.GetLogger().Printf("Error starting daemon service: %v", err)
 		return
 	}
@@ -154,6 +161,29 @@ func HandleDefaultStartup() {
 	openBrowser(guiUrl)
 }
 
+// isAppRunning checks if another instance of the application is already running by pinging the server.
+func isAppRunning(url string) bool {
+	resp, err := http.Get(url + "/ping")
+	if err != nil {
+		return false
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close response body in isAppRunning: %v", err)
+		}
+	}()
+	return resp.StatusCode == http.StatusOK
+}
+
+// startBackgroundService starts a command as a detached background process.
+func startBackgroundService(path, command string) error {
+	cmd := exec.Command(path, command)
+	// CREATE_NO_WINDOW flag prevents a console window from appearing on Windows.
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
+	return cmd.Start()
+}
+
+// openBrowser opens the specified URL in the default browser.
 func openBrowser(url string) {
 	if err := exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start(); err != nil {
 		data.GetLogger().Printf("Error opening browser: %v\n", err)

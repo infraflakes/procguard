@@ -9,6 +9,7 @@ import (
 	"procguard/internal/data"
 )
 
+// handleGetAutostartStatus returns the current status of the autostart setting.
 func (s *Server) handleGetAutostartStatus(w http.ResponseWriter, r *http.Request) {
 	cfg, err := data.LoadConfig()
 	if err != nil {
@@ -22,6 +23,7 @@ func (s *Server) handleGetAutostartStatus(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// handleEnableAutostart enables the autostart feature for the application.
 func (s *Server) handleEnableAutostart(w http.ResponseWriter, r *http.Request) {
 	_, err := daemon.EnsureAutostart()
 	if err != nil {
@@ -31,6 +33,7 @@ func (s *Server) handleEnableAutostart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleDisableAutostart disables the autostart feature for the application.
 func (s *Server) handleDisableAutostart(w http.ResponseWriter, r *http.Request) {
 	if err := daemon.RemoveAutostart(); err != nil {
 		http.Error(w, "Failed to disable autostart: "+err.Error(), http.StatusInternalServerError)

@@ -6,11 +6,13 @@ import (
 	"time"
 )
 
-// ParseTime is a helper function to handle our specific time logic.
+// ParseTime is a helper function that parses a string into a time.Time object.
+// It supports both relative time strings (e.g., "now", "1 hour ago") and absolute time strings in specific layouts.
 func ParseTime(input string) (time.Time, error) {
 	now := time.Now()
 	lowerInput := strings.ToLower(strings.TrimSpace(input))
 
+	// Handle relative time strings.
 	switch lowerInput {
 	case "now":
 		return now, nil
@@ -22,10 +24,10 @@ func ParseTime(input string) (time.Time, error) {
 		return now.AddDate(0, 0, -7), nil
 	}
 
+	// Handle absolute time strings.
 	layouts := []string{
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04",
-		"2006-01-02T15:04:05",
 	}
 
 	for _, layout := range layouts {

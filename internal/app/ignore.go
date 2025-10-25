@@ -3,8 +3,9 @@ package app
 import "strings"
 
 // DefaultLinux is the default list of user-level process names to ignore on Linux.
+// These are typically system or desktop environment processes that are not useful to monitor.
 var DefaultLinux = []string{
-	// Systemd processes (user-level)
+	// Systemd processes
 	"systemd",
 	"(sd-pam)",
 
@@ -51,6 +52,7 @@ var DefaultLinux = []string{
 }
 
 // DefaultWindows is the default list of process names to ignore on Windows.
+// These are core system processes that are safe to ignore and not relevant for monitoring.
 var DefaultWindows = []string{
 	// Core system processes that might run at Medium IL and are safe to ignore.
 	"System Idle Process",
@@ -95,19 +97,16 @@ var DefaultWindows = []string{
 }
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.
-// It performs both exact and prefix matching, and handles truncated names.
+// It performs both exact and prefix matching, and handles truncated names that start with a dot.
 func IsIgnored(name string, ignoreList []string) bool {
-	// Handle truncated names that start with a dot, like ".gvfsd-http-wr"
-	nameToCompare := strings.TrimPrefix(name, ".")
-
 	for _, ignored := range ignoreList {
 		if strings.HasSuffix(ignored, "-") {
 			// Prefix match (e.g., "gsd-" should match "gsd-color")
 			if strings.HasPrefix(name, strings.TrimSuffix(ignored, "-")) {
 				return true
 			}
-			// Also check against the dot-stripped name for truncated processes
-			if strings.HasPrefix(nameToCompare, strings.TrimSuffix(ignored, "-")) {
+			// Also check against the name with a leading dot trimmed, for truncated process names.
+			if strings.HasPrefix(strings.TrimPrefix(name, "."), strings.TrimSuffix(ignored, "-")) {
 				return true
 			}
 		} else {

@@ -6,11 +6,11 @@ import (
 	"procguard/internal/data"
 )
 
-// Start runs the core daemon logic in goroutines.
-func Start(appLogger data.Logger, db *sql.DB) {
-	// Goroutine for event-based process logging
-	go app.RunEventLogging(appLogger, db)
+// StartDaemon runs the core daemon logic as long-running background services.
+func StartDaemon(appLogger data.Logger, db *sql.DB) {
+	// Start the process event logger to monitor process creation and termination.
+	app.StartProcessEventLogger(appLogger, db)
 
-	// Goroutine for killing blocked processes
-	go app.RunProcessKiller(appLogger)
+	// Start the blocklist enforcer to kill blocked processes.
+	app.StartBlocklistEnforcer(appLogger)
 }

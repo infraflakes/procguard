@@ -12,14 +12,16 @@ import (
 
 const appName = "ProcGuard"
 
-// EnsureAutostart creates a registry entry and returns the path to the persistent executable.
+// EnsureAutostart sets up the application to run automatically on user logon.
+// It achieves this by creating a registry entry in the `Run` key and copying the executable to a persistent location.
 func EnsureAutostart() (string, error) {
-	// The path to the executable in the persistent location
+	// The path to the executable in the persistent location.
 	destPath, err := copyExecutableToAppData()
 	if err != nil {
 		return "", fmt.Errorf("failed to set up persistent executable: %w", err)
 	}
 
+	// Open the registry key for user-specific autostart applications.
 	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
 		return destPath, fmt.Errorf("failed to open Run registry key: %w", err)
@@ -30,7 +32,7 @@ func EnsureAutostart() (string, error) {
 		}
 	}()
 
-	// Check if the value already exists and is correct.
+	// Check if the autostart entry already exists and is correct.
 	currentPath, _, err := key.GetStringValue(appName)
 	if err == nil && currentPath == destPath {
 		return destPath, nil // Entry already exists and is correct.
@@ -41,7 +43,7 @@ func EnsureAutostart() (string, error) {
 		return destPath, fmt.Errorf("failed to set startup registry key: %w", err)
 	}
 
-	// Update the config file to reflect the change
+	// Update the config file to reflect the change in autostart status.
 	cfg, err := data.LoadConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
@@ -55,13 +57,12 @@ func EnsureAutostart() (string, error) {
 	return destPath, nil
 }
 
-// RemoveAutostart removes the registry entry that starts the application on logon.
+// RemoveAutostart removes the registry entry that starts the application on user logon.
 func RemoveAutostart() error {
-
 	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
 	if err != nil {
 		if err == registry.ErrNotExist {
-			return nil // Key doesn't exist, nothing to do.
+			return nil // Key doesn't exist, so there's nothing to do.
 		}
 		return err
 	}
@@ -71,12 +72,12 @@ func RemoveAutostart() error {
 		}
 	}()
 
-	// Delete the value. If it doesn't exist, this will return an error that we can ignore.
+	// Delete the registry value. If it doesn't exist, we can ignore the error.
 	if err := key.DeleteValue(appName); err != nil && err != registry.ErrNotExist {
 		return err
 	}
 
-	// Update the config file to reflect the change
+	// Update the config file to reflect the change in autostart status.
 	cfg, err := data.LoadConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to load config to update autostart status:", err)
@@ -90,8 +91,8 @@ func RemoveAutostart() error {
 	return nil
 }
 
-// copyExecutableToAppData copies the current executable to a hidden, persistent location in LOCALAPPDATA.
-// It returns the path to the new executable.
+// copyExecutableToAppData copies the current executable to a persistent location in the user's LOCALAPPDATA directory.
+// This ensures that the application can be started by the system even if the original executable is moved or deleted.
 func copyExecutableToAppData() (string, error) {
 	sourcePath, err := os.Executable()
 	if err != nil {
@@ -105,7 +106,7 @@ func copyExecutableToAppData() (string, error) {
 	destDir := filepath.Join(localAppData, appName)
 	destPath := filepath.Join(destDir, "ProcGuardSvc.exe")
 
-	// If the file already exists, no need to copy again.
+	// If the file already exists at the destination, there's no need to copy it again.
 	if _, err := os.Stat(destPath); err == nil {
 		return destPath, nil
 	}

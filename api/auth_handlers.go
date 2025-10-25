@@ -7,6 +7,7 @@ import (
 	"procguard/internal/data"
 )
 
+// handleLogout handles the user logout.
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	s.Mu.Lock()
 	s.IsAuthenticated = false
@@ -14,6 +15,8 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
+// handleHasPassword checks if a password has been set for the application.
+// It returns a JSON response with a boolean `hasPassword` field.
 func (s *Server) handleHasPassword(w http.ResponseWriter, r *http.Request) {
 	cfg, err := data.LoadConfig()
 	if err != nil {
@@ -26,6 +29,9 @@ func (s *Server) handleHasPassword(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleLogin handles the user login.
+// It expects a JSON request with a `password` field.
+// It returns a JSON response with a boolean `success` field.
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Password string `json:"password"`
@@ -55,6 +61,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleSetPassword handles the initial password setup.
+// It expects a JSON request with a `password` field.
+// It returns a JSON response with a boolean `success` field.
 func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Password string `json:"password"`

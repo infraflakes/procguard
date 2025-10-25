@@ -23,7 +23,9 @@ import (
 const appName = "ProcGuard"
 const hostName = "com.nixuris.procguard"
 
-func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
+// handleUninstall handles the uninstallation of the application.
+// It performs a series of cleanup tasks in a separate goroutine and then initiates a self-deletion process.
+func (s *Server) handleUninstall(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Password string `json:"password"`
 	}
@@ -44,47 +46,47 @@ func (s *Server) apiUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		// Close the logger to release file handles
+		// Close the logger and database to release file handles before deletion.
 		s.Logger.Close()
-		// Close the database connection
 		if err := s.db.Close(); err != nil {
-			// We can't use the logger here, so just print to stderr
+			// We can't use the logger here, so just print to stderr.
 			fmt.Fprintf(os.Stderr, "Failed to close database: %v\n", err)
 		}
 
-		// Kill other ProcGuard processes
+		// Terminate any other running ProcGuard processes.
 		killOtherProcGuardProcesses(s.Logger)
 
+		// Unblock any files that were blocked by the application.
 		if err := unblockAll(); err != nil {
-			// Log to stderr since the logger is closed
 			fmt.Fprintf(os.Stderr, "Failed to unblock all files: %v\n", err)
 		}
 
-		// Perform other cleanup tasks that don't involve file deletion
+		// Perform other cleanup tasks.
 		if err := daemon.RemoveAutostart(); err != nil {
-			// Log to stderr since the logger is closed
 			fmt.Fprintf(os.Stderr, "Failed to remove autostart: %v\n", err)
 		}
 		if err := removeNativeHost(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to remove native host: %v\n", err)
 		}
 
-		// Create and launch the self-deleting batch script
+		// Initiate the self-deletion process.
 		if err := selfDelete(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to initiate self-deletion: %v\n", err)
 		}
 
-		// Exit the application
+		// Exit the application to allow the self-deletion to complete.
 		os.Exit(0)
 	}()
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]bool{"ok": true}); err != nil {
-		// The logger is closed, so just print to stderr
+		// The logger is closed, so just print to stderr.
 		fmt.Fprintf(os.Stderr, "Error encoding response: %v\n", err)
 	}
 }
 
+// selfDelete creates and executes a batch script that deletes the application files after the main process has exited.
+// This is a common technique for applications on Windows to perform self-uninstallation.
 func selfDelete() error {
 	if runtime.GOOS != "windows" {
 		return fmt.Errorf("self-deletion is currently implemented only for Windows")
@@ -96,15 +98,13 @@ func selfDelete() error {
 	}
 	appDataDir := filepath.Join(localAppData, appName)
 
-	// Create a temporary batch file
+	// Create a temporary batch file in the system's temp directory.
 	tempDir := os.TempDir()
 	batchFileName := fmt.Sprintf("delete_procguard_%d.bat", time.Now().UnixNano())
 	batchFilePath := filepath.Join(tempDir, batchFileName)
 
-	// The batch script content:
-	// 1. Wait for the main process to exit.
-	// 2. Delete the application data directory.
-	// 3. Delete the batch file itself.
+	// The batch script waits for a moment to ensure the main process has exited,
+	// then deletes the application's data directory and finally deletes itself.
 	batchContent := fmt.Sprintf(`
 @echo off
 timeout /t 2 /nobreak > nul
@@ -117,7 +117,7 @@ del "%s"
 		return fmt.Errorf("failed to write batch file: %w", err)
 	}
 
-	// Execute the batch file in a detached process
+	// Execute the batch file in a new, detached process so it can run independently of the main application.
 	cmd := exec.Command("cmd.exe", "/C", batchFilePath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		HideWindow:    true,
@@ -132,6 +132,7 @@ del "%s"
 	return nil
 }
 
+// killOtherProcGuardProcesses finds and terminates any other running ProcGuard processes.
 func killOtherProcGuardProcesses(logger data.Logger) {
 	currentPid := os.Getpid()
 	procs, err := process.Processes()
@@ -157,8 +158,9 @@ func killOtherProcGuardProcesses(logger data.Logger) {
 	}
 }
 
+// unblockAll restores the original names of any files that were blocked by the application.
 func unblockAll() error {
-	list, err := data.LoadApp()
+	list, err := data.LoadAppBlocklist()
 	if err != nil {
 		return fmt.Errorf("could not load blocklist: %w", err)
 	}
@@ -167,7 +169,7 @@ func unblockAll() error {
 		if strings.HasSuffix(name, ".blocked") {
 			newName := strings.TrimSuffix(name, ".blocked")
 			if err := os.Rename(name, newName); err != nil {
-				// Log the error but continue trying to unblock other files
+				// Log the error but continue trying to unblock other files.
 				data.GetLogger().Printf("Failed to unblock file %s: %v", name, err)
 			}
 		}
@@ -176,8 +178,9 @@ func unblockAll() error {
 	return nil
 }
 
+// removeNativeHost removes the native messaging host configuration from the system.
 func removeNativeHost() error {
-	// Delete the registry key.
+	// Delete the registry key for the native messaging host.
 	keyPath := `SOFTWARE\Google\Chrome\NativeMessagingHosts\` + hostName
 	if err := registry.DeleteKey(registry.CURRENT_USER, keyPath); err != nil && err != registry.ErrNotExist {
 		return err

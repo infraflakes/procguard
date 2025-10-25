@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
+// handleGetWebBlocklist returns the list of blocked websites with their details.
 func (s *Server) handleGetWebBlocklist(w http.ResponseWriter, r *http.Request) {
-	list, err := data.LoadWebWithDetails(s.db)
+	list, err := data.GetBlockedWebsitesWithDetails(s.db)
 	if err != nil {
 		http.Error(w, "Failed to load web blocklist with details", http.StatusInternalServerError)
 		return
@@ -21,6 +22,8 @@ func (s *Server) handleGetWebBlocklist(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleAddWebBlocklist adds a domain to the web blocklist.
+// It expects a JSON request with a `domain` field.
 func (s *Server) handleAddWebBlocklist(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Domain string `json:"domain"`
@@ -30,7 +33,7 @@ func (s *Server) handleAddWebBlocklist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := data.AddWeb(req.Domain); err != nil {
+	if _, err := data.AddWebsiteToBlocklist(req.Domain); err != nil {
 		http.Error(w, "Failed to add to web blocklist", http.StatusInternalServerError)
 		return
 	}
@@ -41,6 +44,8 @@ func (s *Server) handleAddWebBlocklist(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleRemoveWebBlocklist removes a domain from the web blocklist.
+// It expects a JSON request with a `domain` field.
 func (s *Server) handleRemoveWebBlocklist(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Domain string `json:"domain"`
@@ -50,7 +55,7 @@ func (s *Server) handleRemoveWebBlocklist(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if _, err := data.RemoveWeb(req.Domain); err != nil {
+	if _, err := data.RemoveWebsiteFromBlocklist(req.Domain); err != nil {
 		http.Error(w, "Failed to remove from web blocklist", http.StatusInternalServerError)
 		return
 	}
@@ -61,8 +66,9 @@ func (s *Server) handleRemoveWebBlocklist(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// handleClearWebBlocklist removes all domains from the web blocklist.
 func (s *Server) handleClearWebBlocklist(w http.ResponseWriter, r *http.Request) {
-	if err := data.SaveWeb([]string{}); err != nil {
+	if err := data.ClearWebBlocklist(); err != nil {
 		http.Error(w, "Failed to clear web blocklist", http.StatusInternalServerError)
 		return
 	}
@@ -73,8 +79,9 @@ func (s *Server) handleClearWebBlocklist(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// handleSaveWebBlocklist saves the current web blocklist to a file for export.
 func (s *Server) handleSaveWebBlocklist(w http.ResponseWriter, r *http.Request) {
-	list, err := data.LoadWeb()
+	list, err := data.LoadWebBlocklist()
 	if err != nil {
 		http.Error(w, "Failed to get web blocklist", http.StatusInternalServerError)
 		return
@@ -98,6 +105,7 @@ func (s *Server) handleSaveWebBlocklist(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// handleLoadWebBlocklist loads a web blocklist from an uploaded file and merges it with the existing blocklist.
 func (s *Server) handleLoadWebBlocklist(w http.ResponseWriter, r *http.Request) {
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -131,7 +139,7 @@ func (s *Server) handleLoadWebBlocklist(w http.ResponseWriter, r *http.Request) 
 		newEntries = savedList.Blocked
 	}
 
-	existingList, err := data.LoadWeb()
+	existingList, err := data.LoadWebBlocklist()
 	if err != nil {
 		http.Error(w, "Failed to load existing web blocklist", http.StatusInternalServerError)
 		return
@@ -143,7 +151,7 @@ func (s *Server) handleLoadWebBlocklist(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	if err := data.SaveWeb(existingList); err != nil {
+	if err := data.SaveWebBlocklist(existingList); err != nil {
 		http.Error(w, "Failed to save merged web blocklist", http.StatusInternalServerError)
 		return
 	}
@@ -154,6 +162,7 @@ func (s *Server) handleLoadWebBlocklist(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// handleGetWebLogs retrieves web logs from the database within a given time range.
 func (s *Server) handleGetWebLogs(w http.ResponseWriter, r *http.Request) {
 	sinceStr := r.URL.Query().Get("since")
 	untilStr := r.URL.Query().Get("until")

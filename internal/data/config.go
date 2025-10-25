@@ -20,7 +20,7 @@ func NewConfig() *Config {
 	return &Config{}
 }
 
-// GetConfigPath returns the path to the configuration file.
+// GetConfigPath returns the path to the configuration file, which is stored in the user's cache directory.
 func GetConfigPath() (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -30,7 +30,7 @@ func GetConfigPath() (string, error) {
 }
 
 // LoadConfig reads the configuration file from the user's cache directory.
-// If the file doesn't exist, it returns a default configuration.
+// If the file doesn't exist, it returns a new default configuration, making the application resilient.
 func LoadConfig() (*Config, error) {
 	path, err := GetConfigPath()
 	if err != nil {
@@ -40,6 +40,7 @@ func LoadConfig() (*Config, error) {
 	content, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		// If the config file doesn't exist, create a new one with default values.
+		// This makes the application more robust on first run or if the file is deleted.
 		return NewConfig(), nil
 	}
 	if err != nil {
@@ -48,7 +49,8 @@ func LoadConfig() (*Config, error) {
 
 	var config Config
 	if err := json.Unmarshal(content, &config); err != nil {
-		// If the file is corrupted or invalid, return an error.
+		// If the file is corrupted or invalid, it's better to return an error
+		// than to proceed with a potentially broken configuration.
 		return nil, err
 	}
 
@@ -72,6 +74,6 @@ func (c *Config) Save() error {
 		return err
 	}
 
-	// Write the content to the file with read/write permissions for the current user.
+	// Write the content to the file with read/write permissions for the current user only.
 	return os.WriteFile(path, content, 0644)
 }
