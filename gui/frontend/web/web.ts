@@ -13,7 +13,8 @@ function showWebManagementView(): void {
       notInstalledView.style.display = 'none';
       webManTabs.style.display = 'flex';
       webManTabsContent.style.display = 'block';
-      showSubView('web-log-view', 'web-management-view');
+      showSubView('web-leaderboard-view', 'web-management-view');
+      loadWebLeaderboard();
     } else {
       notInstalledView.style.display = 'block';
       webManTabs.style.display = 'none';
@@ -295,4 +296,74 @@ async function loadWebBlocklistFile(event: Event): Promise<void> {
     }, 3000);
   }
   loadWebBlocklist(); // Refresh the list
+}
+
+async function loadWebLeaderboard(since = '', until = ''): Promise<void> {
+  const container = document.getElementById('web-leaderboard-table-container');
+  if (!container) {
+    return;
+  }
+
+  let url = '/api/leaderboard/web';
+  const params = new URLSearchParams();
+  if (since) {
+    params.append('since', since);
+  }
+  if (until) {
+    params.append('until', until);
+  }
+  const queryString = params.toString();
+  if (queryString) {
+    url += `?${queryString}`;
+  }
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data && data.length > 0) {
+    const table = document.createElement('table');
+    table.className = 'table table-hover';
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+      <tr>
+        <th scope="col">Rank</th>
+        <th scope="col">Website</th>
+        <th scope="col">Visit Count</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    tbody.innerHTML = data
+      .map(
+        (item: {
+          rank: number;
+          domain: string;
+          title: string;
+          icon: string;
+          count: number;
+        }) => `
+      <tr>
+        <th scope="row"><span class="badge bg-primary">${item.rank}</span></th>
+        <td>
+          ${
+            item.icon
+              ? `<img src="${item.icon}" class="me-2" style="width: 24px; height: 24px;">`
+              : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
+          }
+          <span class="fw-bold">${item.title || item.domain}</span>
+        </td>
+        <td>${item.count}</td>
+      </tr>
+    `
+      )
+      .join('');
+    table.appendChild(tbody);
+
+    container.innerHTML = '';
+    container.appendChild(table);
+  } else {
+    container.innerHTML =
+      '<div class="list-group-item">No data for leaderboard.</div>';
+  }
 }

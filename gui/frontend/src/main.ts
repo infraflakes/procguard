@@ -4,16 +4,30 @@ const topLevelViews: string[] = [
   'web-management-view',
   'settings-view',
 ];
-const appSubViews: string[] = ['search-view', 'blocklist-view'];
-const webSubViews: string[] = ['web-log-view', 'web-blocklist-view'];
+const appSubViews: string[] = [
+  'leaderboard-view',
+  'search-view',
+  'blocklist-view',
+];
+const webSubViews: string[] = [
+  'web-leaderboard-view',
+  'web-log-view',
+  'web-blocklist-view',
+];
 
 declare function loadAutostartStatus(): void;
 declare function loadBlocklist(): void;
 declare function loadWebBlocklist(): void;
 declare function loadWebLogs(): void;
 declare function showWebManagementView(): void;
+declare function loadAppLeaderboard(): void;
+declare function search(): void;
+declare function loadWebLeaderboard(): void;
 
 (window as any).isExtensionInstalled = false;
+
+let pollingTimer: number | null = null;
+const pollingInterval = 5000; // 5 seconds
 
 const sinceDateInput = document.getElementById(
   'since_date'
@@ -92,6 +106,12 @@ function checkExtension(callback?: (success: boolean) => void): void {
 }
 
 function showTopLevelView(viewName: string): void {
+  // Clear any existing polling timer
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
+    pollingTimer = null;
+  }
+
   topLevelViews.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -100,9 +120,21 @@ function showTopLevelView(viewName: string): void {
   if (el) el.style.display = 'block';
 
   if (viewName === 'app-management-view') {
-    showSubView('search-view', 'app-management-view');
+    showSubView('leaderboard-view', 'app-management-view');
+    loadAppLeaderboard();
+    pollingTimer = setInterval(() => {
+      loadAppLeaderboard();
+      // Also refresh the search results if the search view is active
+      if (document.getElementById('search-view')?.style.display !== 'none') {
+        search();
+      }
+    }, pollingInterval);
   } else if (viewName === 'web-management-view') {
     showWebManagementView();
+    pollingTimer = setInterval(() => {
+      loadWebLeaderboard();
+      loadWebLogs();
+    }, pollingInterval);
   } else if (viewName === 'settings-view') {
     loadAutostartStatus();
   }

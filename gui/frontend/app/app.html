@@ -5,6 +5,17 @@
     <li class="nav-item" role="presentation">
       <button
         class="nav-link active"
+        id="leaderboard-tab"
+        type="button"
+        role="tab"
+        onclick="showSubView('leaderboard-view', 'app-management-view')"
+      >
+        Bảng xếp hạng
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
         id="search-tab"
         type="button"
         role="tab"
@@ -28,8 +39,18 @@
 
   <!-- Tab Content -->
   <div class="tab-content" id="appManTabsContent">
+    <!-- Leaderboard View -->
+    <div id="leaderboard-view" role="tabpanel">
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Bảng xếp hạng ứng dụng</h5>
+          <div id="app-leaderboard-table-container"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Search View -->
-    <div id="search-view" role="tabpanel">
+    <div id="search-view" style="display: none" role="tabpanel">
       <div class="card mt-3">
         <div class="card-body">
           <h5 class="card-title">Tìm kiếm Log ứng dụng</h5>

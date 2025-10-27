@@ -56,6 +56,7 @@ var DefaultLinux = []string{
 var DefaultWindows = []string{
 	// Core system processes that might run at Medium IL and are safe to ignore.
 	"System Idle Process",
+	"ProcGuardSvc.exe",
 	"System",
 	"smss.exe",
 	"lsass.exe",
@@ -94,6 +95,9 @@ var DefaultWindows = []string{
 	"dwm.exe",
 	"spoolsv.exe",
 	"services.exe", // Parent process check should handle most children, but we can ignore the parent itself.
+	"Widgets.exe",
+	"WidgetService.exe",
+	"UserOOBEBroker.exe",
 }
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.

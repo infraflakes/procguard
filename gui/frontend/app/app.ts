@@ -221,3 +221,67 @@ async function loadBlocklistFile(event: Event): Promise<void> {
   }, 3000);
   loadBlocklist(); // Refresh the list
 }
+
+async function loadAppLeaderboard(since = '', until = ''): Promise<void> {
+  const container = document.getElementById('app-leaderboard-table-container');
+  if (!container) {
+    return;
+  }
+
+  let url = '/api/leaderboard/apps';
+  const params = new URLSearchParams();
+  if (since) {
+    params.append('since', since);
+  }
+  if (until) {
+    params.append('until', until);
+  }
+  const queryString = params.toString();
+  if (queryString) {
+    url += `?${queryString}`;
+  }
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data && data.length > 0) {
+    const table = document.createElement('table');
+    table.className = 'table table-hover';
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+      <tr>
+        <th scope="col">Rank</th>
+        <th scope="col">Application</th>
+        <th scope="col">Usage Count</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    tbody.innerHTML = data
+      .map(
+        (item: { rank: number; name: string; icon: string; count: number }) => `
+      <tr>
+        <th scope="row"><span class="badge bg-primary">${item.rank}</span></th>
+        <td>
+          ${
+            item.icon
+              ? `<img src="data:image/png;base64,${item.icon}" class="me-2" style="width: 24px; height: 24px;">`
+              : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
+          }
+          <span class="fw-bold">${item.name}</span>
+        </td>
+        <td>${item.count}</td>
+      </tr>
+    `
+      )
+      .join('');
+    table.appendChild(tbody);
+
+    container.innerHTML = '';
+    container.appendChild(table);
+  } else {
+    container.innerHTML =
+      '<div class="list-group-item">No data for leaderboard.</div>';
+  }
+}

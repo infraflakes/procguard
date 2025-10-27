@@ -28,6 +28,17 @@
     <li class="nav-item" role="presentation">
       <button
         class="nav-link active"
+        id="web-leaderboard-tab"
+        type="button"
+        role="tab"
+        onclick="showSubView('web-leaderboard-view', 'web-management-view')"
+      >
+        Bảng xếp hạng
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
         id="web-log-tab"
         type="button"
         role="tab"
@@ -51,8 +62,18 @@
 
   <!-- Tab Content -->
   <div class="tab-content" id="webManTabsContent">
+    <!-- Web Leaderboard View -->
+    <div id="web-leaderboard-view" role="tabpanel">
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Bảng xếp hạng Web</h5>
+          <div id="web-leaderboard-table-container"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Web Log View -->
-    <div id="web-log-view" role="tabpanel">
+    <div id="web-log-view" style="display: none" role="tabpanel">
       <div class="card mt-3">
         <div class="card-body">
           <h5 class="card-title">Lịch sử Truy cập Web</h5>
