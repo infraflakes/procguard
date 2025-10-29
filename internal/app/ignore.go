@@ -98,6 +98,10 @@ var DefaultWindows = []string{
 	"Widgets.exe",
 	"WidgetService.exe",
 	"UserOOBEBroker.exe",
+	"BdeUISrv.exe",
+	"userinit.exe",
+	"DataExchangeHost.exe",
+	"mobsync.exe",
 }
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.

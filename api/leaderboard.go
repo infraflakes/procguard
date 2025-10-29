@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"procguard/internal/app"
 	"procguard/internal/data"
 	"time"
 )
@@ -96,13 +95,15 @@ func (s *Server) getAppLeaderboard(since, until string) ([]AppLeaderboardItem, e
 			continue
 		}
 
-		// Enrich with icon
+		// Enrich with icon and commercial name
 		var exePath string
 		row := s.db.QueryRow("SELECT exe_path FROM app_events WHERE process_name = ? AND exe_path IS NOT NULL ORDER BY start_time DESC LIMIT 1", item.Name)
 		if err := row.Scan(&exePath); err == nil {
-			if icon, err := app.GetAppIconAsBase64(exePath); err == nil {
-				item.Icon = icon
+			commercialName, icon := s.getAppDetails(exePath)
+			if commercialName != "" {
+				item.Name = commercialName
 			}
+			item.Icon = icon
 		}
 
 		leaderboard = append(leaderboard, item)

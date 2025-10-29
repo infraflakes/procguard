@@ -88,14 +88,8 @@ func (srv *Server) authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// handleAppDetails retrieves details for a given application, such as its commercial name and icon.
-func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
-	exePath := r.URL.Query().Get("path")
-	if exePath == "" {
-		http.Error(w, "Missing app path", http.StatusBadRequest)
-		return
-	}
-
+// getAppDetails retrieves details for a given application, such as its commercial name and icon.
+func (srv *Server) getAppDetails(exePath string) (string, string) {
 	// Get the commercial name from the executable's file version information.
 	info, err := fileversion.New(exePath)
 	var commercialName string
@@ -120,6 +114,19 @@ func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
 		// Log the error but don't fail the request, as the icon is not critical.
 		srv.Logger.Printf("Failed to get icon for %s: %v", exePath, err)
 	}
+
+	return commercialName, icon
+}
+
+// handleAppDetails retrieves details for a given application, such as its commercial name and icon.
+func (srv *Server) handleAppDetails(w http.ResponseWriter, r *http.Request) {
+	exePath := r.URL.Query().Get("path")
+	if exePath == "" {
+		http.Error(w, "Missing app path", http.StatusBadRequest)
+		return
+	}
+
+	commercialName, icon := srv.getAppDetails(exePath)
 
 	response := struct {
 		CommercialName string `json:"commercialName"`
