@@ -59,6 +59,7 @@ var DefaultWindows = []string{
 	"ProcGuardSvc.exe",
 	"System",
 	"smss.exe",
+	"explorer.exe",
 	"lsass.exe",
 	"StartMenuExperienceHost.exe",
 	"SearchHost.exe",
@@ -102,6 +103,9 @@ var DefaultWindows = []string{
 	"userinit.exe",
 	"DataExchangeHost.exe",
 	"mobsync.exe",
+	"DeviceCensus.exe",
+	"DismHost.exe",
+	"cleanmgr.exe",
 }
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.

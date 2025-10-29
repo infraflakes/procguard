@@ -70,6 +70,7 @@ async function search(range?: { since: string; until: string }): Promise<void> {
                   commercialName || processName
                 }</span>
                 <span class="text-muted">${otherInfo}</span>
+		<span class="text-muted ms-auto">${processName}</span>
               </label>`;
       })
     );

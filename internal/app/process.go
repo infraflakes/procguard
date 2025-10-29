@@ -2,12 +2,13 @@ package app
 
 import (
 	"database/sql"
-	"os"
-	"path/filepath"
+	"fmt"
 	"procguard/internal/data"
 	"slices"
 	"strings"
+	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/shirou/gopsutil/v3/process"
 )
@@ -16,6 +17,42 @@ const (
 	processCheckInterval     = 2 * time.Second
 	blocklistEnforceInterval = 100 * time.Millisecond
 )
+
+var (
+	user32                       = syscall.NewLazyDLL("user32.dll")
+	procEnumWindows              = user32.NewProc("EnumWindows")
+	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
+	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
+)
+
+// hasVisibleWindow checks if a process with the given PID has a visible window.
+func hasVisibleWindow(pid uint32) bool {
+	var foundVisibleWindow bool
+	enumWindows := func(hwnd syscall.Handle, lParam uintptr) uintptr {
+		var windowPid uint32
+		_, _, err := procGetWindowThreadProcessId.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&windowPid)))
+		if err != syscall.Errno(0) {
+			// Continue enumeration even if one window fails
+			return 1
+		}
+
+		if windowPid == pid {
+			isVisible, _, _ := procIsWindowVisible.Call(uintptr(hwnd))
+			if isVisible != 0 {
+				foundVisibleWindow = true
+				return 0 // Stop enumeration
+			}
+		}
+		return 1 // Continue enumeration
+	}
+
+	cb := syscall.NewCallback(enumWindows)
+	_, _, err := procEnumWindows.Call(cb, 0)
+	if err != syscall.Errno(0) {
+		fmt.Printf("Error enumerating windows: %v\n", err)
+	}
+	return foundVisibleWindow
+}
 
 // StartProcessEventLogger starts a long-running goroutine that monitors process creation and termination events.
 func StartProcessEventLogger(appLogger data.Logger, db *sql.DB) {
@@ -166,41 +203,38 @@ func shouldLogProcess(p *process.Process) bool {
 		return false // Skip processes with no name
 	}
 
-	// Do not log the ProcGuard process itself.
-	if p.Pid == int32(os.Getpid()) {
+	// Do not log the ProcGuard process itself or other ignored processes.
+	if IsIgnored(name, DefaultWindows) || IsIgnored(name, []string{"ProcGuardSvc.exe"}) {
 		return false
 	}
 
-	parent, err := p.Parent()
-	if err != nil {
-		return false // Skip processes with no parent
-	}
-	parentName, _ := parent.Name()
-
-	// Do not log a process if its parent has the same name, as these are often helper processes.
-	if name == parentName {
-		return false
+	// Log if it has a visible window.
+	if hasVisibleWindow(uint32(p.Pid)) {
+		return true
 	}
 
-	// Do not log a process if it's in the same directory as its parent, as these are also often helper processes.
-	childExe, err := p.Exe()
-	if err == nil {
-		parentExe, err := parent.Exe()
-		if err == nil {
-			if filepath.Dir(childExe) == filepath.Dir(parentExe) {
-				return false
-			}
-		}
-	}
-
-	// On Windows, filter out processes based on their integrity level and a predefined ignore list.
+	// If it doesn't have a window, check its integrity level.
 	il, err := GetProcessIntegrityLevel(uint32(p.Pid))
 	if err == nil && il >= SECURITY_MANDATORY_SYSTEM_RID {
 		return false // Skip system and high integrity processes.
 	}
-	if IsIgnored(name, DefaultWindows) || IsIgnored(parentName, DefaultWindows) {
+
+	parent, err := p.Parent()
+	if err != nil {
+		// No parent and no window, could be a standalone background task. Log it.
+		return true
+	}
+
+	parentName, err := parent.Name()
+	if err != nil {
+		return true // Can't get parent name, assume it's a top-level process.
+	}
+
+	// If the parent is a known system process, don't log the child.
+	if IsIgnored(parentName, DefaultWindows) {
 		return false
 	}
 
-	return true
+	// By default, do not log child processes without a visible window.
+	return false
 }
