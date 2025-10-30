@@ -3,6 +3,7 @@ package main
 //go:generate go run github.com/akavel/rsrc -manifest build/procguard.manifest -o build/cache/rsrc.syso
 
 import (
+	"database/sql"
 	"io/fs"
 	"log"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"procguard/internal/data"
 	"procguard/internal/web"
 	"strings"
-	"syscall"
+
 	"time"
 )
 
@@ -23,56 +24,36 @@ const (
 	defaultPort = "58141"
 	// chromeExtensionID is the ID of the Chrome extension that communicates with the native messaging host.
 	chromeExtensionID = "ilaocldmkhlifnikhinkmiepekpbefoh"
-
-	// command line arguments to run specific parts of the application.
-	cmdRunAPI    = "run-api"
-	cmdRunDaemon = "run-daemon"
 )
 
 // main is the entry point of the application. It determines the execution mode based on command-line arguments.
 func main() {
+	db, err := data.InitDB()
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	data.NewLogger(db)
+
 	// When the application is launched by Chrome as a native messaging host,
 	// the first argument is the origin of the extension.
 	if len(os.Args) > 1 && strings.HasPrefix(os.Args[1], "chrome-extension://") {
-		runNativeMessagingHost()
+		runNativeMessagingHost(db)
 		return
 	}
 
-	// If there are no arguments, start the main GUI application.
-	// Otherwise, run the specified command.
-	if len(os.Args) == 1 {
-		startGUIApplication()
-	} else {
-		switch os.Args[1] {
-		case cmdRunAPI:
-			startAPIServer()
-		case cmdRunDaemon:
-			startDaemonService()
-		}
-	}
+	startGUIApplication(db)
 }
 
 // runNativeMessagingHost starts the application in native messaging host mode,
 // allowing communication with the browser extension.
-func runNativeMessagingHost() {
-	db, err := data.OpenDB()
-	if err != nil {
-		log.Fatalf("Native messaging host failed to open database: %v", err)
-	}
-	data.NewLogger(db)
+func runNativeMessagingHost(db *sql.DB) {
 	web.Run()
 }
 
-// startAPIServer initializes and starts the API server.
-func startAPIServer() {
+// startAPIServer initializes and starts the API server in a new goroutine.
+func startAPIServer(db *sql.DB) {
 	addr := "127.0.0.1:" + defaultPort
-
-	db, err := data.InitDB()
-	if err != nil {
-		log.Fatalf("Failed to initialize database for API server: %v", err)
-	}
-	data.NewLogger(db)
-	api.StartWebServer(addr, registerWebRoutes)
+	go api.StartWebServer(addr, registerWebRoutes, db)
 }
 
 // registerWebRoutes sets up the routes for the web server.
@@ -100,31 +81,12 @@ func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
 }
 
 // startDaemonService initializes and starts the background daemon.
-func startDaemonService() {
-	db, err := data.InitDB()
-	if err != nil {
-		log.Fatalf("Failed to initialize database for daemon: %v", err)
-	}
-	data.NewLogger(db)
-	defer func() {
-		if err := db.Close(); err != nil {
-			data.GetLogger().Printf("Failed to close database in daemon: %v", err)
-		}
-	}()
-
+func startDaemonService(db *sql.DB) {
 	daemon.StartDaemon(data.GetLogger(), db)
-	// Keep the daemon running indefinitely.
-	select {}
 }
 
 // startGUIApplication handles the main startup logic for the GUI application.
-func startGUIApplication() {
-	db, err := data.InitDB()
-	if err != nil {
-		log.Fatalf("Failed to initialize database for GUI: %v", err)
-	}
-	data.NewLogger(db)
-
+func startGUIApplication(db *sql.DB) {
 	exePath, err := os.Executable()
 	if err != nil {
 		data.GetLogger().Printf("Error getting executable path: %v", err)
@@ -146,19 +108,16 @@ func startGUIApplication() {
 		return
 	}
 
-	// If no instance is running, start the API and daemon services as background processes.
-	if err := startBackgroundService(exePath, cmdRunAPI); err != nil {
-		data.GetLogger().Printf("Error starting API service: %v", err)
-		return
-	}
-	if err := startBackgroundService(exePath, cmdRunDaemon); err != nil {
-		data.GetLogger().Printf("Error starting daemon service: %v", err)
-		return
-	}
+	// Start the API server and the daemon as goroutines.
+	startAPIServer(db)
+	startDaemonService(db)
 
 	// Give the server a moment to start before opening the browser.
 	time.Sleep(1 * time.Second)
 	openBrowser(guiUrl)
+
+	// Keep the main GUI application running.
+	select {}
 }
 
 // isAppRunning checks if another instance of the application is already running by pinging the server.
@@ -173,14 +132,6 @@ func isAppRunning(url string) bool {
 		}
 	}()
 	return resp.StatusCode == http.StatusOK
-}
-
-// startBackgroundService starts a command as a detached background process.
-func startBackgroundService(path, command string) error {
-	cmd := exec.Command(path, command)
-	// CREATE_NO_WINDOW flag prevents a console window from appearing on Windows.
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
-	return cmd.Start()
 }
 
 // openBrowser opens the specified URL in the default browser.

@@ -22,33 +22,22 @@ type Server struct {
 	IsAuthenticated bool
 	Mu              sync.Mutex
 	db              *sql.DB
+	iconCache       map[string]string
+	iconCacheMu     sync.Mutex
 }
 
 // NewServer creates a new Server with its dependencies.
-func NewServer() (*Server, error) {
-	db, err := data.OpenDB()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-
+func NewServer(db *sql.DB) *Server {
 	return &Server{
-		Logger: data.GetLogger(),
-		db:     db,
-	}, nil
+		Logger:    data.GetLogger(),
+		db:        db,
+		iconCache: make(map[string]string),
+	}
 }
 
 // StartWebServer configures and starts the web server.
-func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.ServeMux)) {
-	srv, err := NewServer()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating server:", err)
-		os.Exit(1)
-	}
-	defer func() {
-		if err := srv.db.Close(); err != nil {
-			srv.Logger.Printf("Failed to close database: %v", err)
-		}
-	}()
+func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.ServeMux), db *sql.DB) {
+	srv := NewServer(db)
 
 	r := http.NewServeMux()
 
@@ -108,12 +97,23 @@ func (srv *Server) getAppDetails(exePath string) (string, string) {
 		commercialName = strings.TrimSuffix(filepath.Base(exePath), filepath.Ext(exePath))
 	}
 
+	srv.iconCacheMu.Lock()
+	icon, ok := srv.iconCache[exePath]
+	srv.iconCacheMu.Unlock()
+	if ok {
+		return commercialName, icon
+	}
+
 	// Get the application's icon as a base64-encoded string.
-	icon, err := app.GetAppIconAsBase64(exePath)
+	icon, err = app.GetAppIconAsBase64(exePath)
 	if err != nil {
 		// Log the error but don't fail the request, as the icon is not critical.
 		srv.Logger.Printf("Failed to get icon for %s: %v", exePath, err)
 	}
+
+	srv.iconCacheMu.Lock()
+	srv.iconCache[exePath] = icon
+	srv.iconCacheMu.Unlock()
 
 	return commercialName, icon
 }

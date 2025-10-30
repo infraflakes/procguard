@@ -88,10 +88,7 @@ func logEndedProcesses(appLogger data.Logger, db *sql.DB, runningProcs, currentP
 	for pid := range runningProcs {
 		if !currentProcs[pid] {
 			// Process has ended. Update its end_time in the DB.
-			_, err := db.Exec("UPDATE app_events SET end_time = ? WHERE pid = ? AND end_time IS NULL", time.Now().Unix(), pid)
-			if err != nil {
-				appLogger.Printf("Failed to update end_time for pid %d: %v", pid, err)
-			}
+			data.EnqueueWrite("UPDATE app_events SET end_time = ? WHERE pid = ? AND end_time IS NULL", time.Now().Unix(), pid)
 			delete(runningProcs, pid)
 		}
 	}
@@ -114,11 +111,8 @@ func logNewProcesses(appLogger data.Logger, db *sql.DB, runningProcs map[int32]b
 				if err != nil {
 					appLogger.Printf("Failed to get exe path for %s (pid %d): %v", name, p.Pid, err)
 				}
-				_, err = db.Exec("INSERT INTO app_events (process_name, pid, parent_process_name, exe_path, start_time) VALUES (?, ?, ?, ?, ?)",
+				data.EnqueueWrite("INSERT INTO app_events (process_name, pid, parent_process_name, exe_path, start_time) VALUES (?, ?, ?, ?, ?)",
 					name, p.Pid, parentName, exePath, time.Now().Unix())
-				if err != nil {
-					appLogger.Printf("Failed to insert new process %s (pid %d): %v", name, p.Pid, err)
-				}
 				runningProcs[p.Pid] = true
 			}
 		}
@@ -147,10 +141,7 @@ func initializeRunningProcs(runningProcs map[int32]bool, db *sql.DB) {
 			} else {
 				// Process is not running, so it should have been marked as ended.
 				// This handles cases where the daemon was stopped abruptly.
-				_, err := db.Exec("UPDATE app_events SET end_time = ? WHERE pid = ? AND end_time IS NULL", time.Now().Unix(), pid)
-				if err != nil {
-					data.GetLogger().Printf("Failed to backfill end_time for pid %d: %v", pid, err)
-				}
+				data.EnqueueWrite("UPDATE app_events SET end_time = ? WHERE pid = ? AND end_time IS NULL", time.Now().Unix(), pid)
 			}
 		}
 	}

@@ -106,6 +106,8 @@ var DefaultWindows = []string{
 	"DeviceCensus.exe",
 	"DismHost.exe",
 	"cleanmgr.exe",
+	"Taskmgr.exe",
+	"WindowsTerminal.exe",
 }
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.

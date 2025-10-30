@@ -137,10 +137,7 @@ func Run() {
 
 // writeUrlToDatabase inserts a new web event into the database.
 func writeUrlToDatabase(db *sql.DB, url string) {
-	_, err := db.Exec("INSERT INTO web_events (url, timestamp) VALUES (?, ?)", url, time.Now().Unix())
-	if err != nil {
-		data.GetLogger().Printf("Failed to insert web event: %v", err)
-	}
+	data.EnqueueWrite("INSERT INTO web_events (url, timestamp) VALUES (?, ?)", url, time.Now().Unix())
 }
 
 // writeWebMetadataToDatabase inserts or updates web metadata in the database.
@@ -155,10 +152,7 @@ func writeWebMetadataToDatabase(db *sql.DB, payload *WebMetadataPayload) {
 			icon_url = excluded.icon_url,
 			timestamp = excluded.timestamp;
 	`
-	_, err := db.Exec(query, payload.Domain, payload.Title, payload.IconURL, time.Now().Unix())
-	if err != nil {
-		data.GetLogger().Printf("Failed to write web metadata: %v", err)
-	}
+	data.EnqueueWrite(query, payload.Domain, payload.Title, payload.IconURL, time.Now().Unix())
 }
 
 // pollWebBlocklist periodically checks for changes in the web blocklist and sends updates to the extension.

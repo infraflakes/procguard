@@ -72,13 +72,7 @@ func (l *multiLogger) write(level, message string) {
 
 	// Then, write to the database.
 	if l.db != nil {
-		_, err := l.db.Exec("INSERT INTO logs (timestamp, level, message) VALUES (?, ?, ?)", time.Now().Unix(), level, message)
-		if err != nil {
-			// If we can't write to the DB, log the failure to the file logger as a fallback.
-			if l.logger != nil {
-				l.logger.Printf("[ERROR] Failed to write log to database: %v", err)
-			}
-		}
+		EnqueueWrite("INSERT INTO logs (timestamp, level, message) VALUES (?, ?, ?)", time.Now().Unix(), level, message)
 	}
 }
 
