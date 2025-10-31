@@ -13,6 +13,7 @@ import (
 	"procguard/gui"
 	"procguard/internal/daemon"
 	"procguard/internal/data"
+	"procguard/internal/ipc"
 	"procguard/internal/web"
 	"strings"
 
@@ -22,6 +23,8 @@ import (
 const (
 	// defaultPort is the port used by the web server.
 	defaultPort = "58141"
+	// internalIPCPort is the port used for internal communication between ProcGuard components.
+	internalIPCPort = "58142"
 	// chromeExtensionID is the ID of the Chrome extension that communicates with the native messaging host.
 	chromeExtensionID = "ilaocldmkhlifnikhinkmiepekpbefoh"
 )
@@ -56,6 +59,21 @@ func startAPIServer(db *sql.DB) {
 	go api.StartWebServer(addr, registerWebRoutes, db)
 }
 
+// startInternalAPIServer initializes and starts the internal IPC server in a new goroutine.
+func startInternalAPIServer(db *sql.DB) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/log-web-event", ipc.HandleLogWebEvent)
+	mux.HandleFunc("/log-web-metadata", ipc.HandleLogWebMetadata)
+	mux.HandleFunc("/get-web-blocklist", ipc.HandleGetWebBlocklist)
+
+	addr := "127.0.0.1:" + internalIPCPort
+	go func() {
+		if err := http.ListenAndServe(addr, mux); err != nil {
+			data.GetLogger().Fatalf("Failed to start internal API server: %v", err)
+		}
+	}()
+}
+
 // registerWebRoutes sets up the routes for the web server.
 func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
 	// Create a sub-filesystem for the frontend assets.
@@ -72,7 +90,7 @@ func registerWebRoutes(srv *api.Server, r *http.ServeMux) {
 
 	// Serve application pages.
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		gui.HandleIndex(&srv.Mu, srv.IsAuthenticated, srv.Logger, w, r)
+		gui.HandleIndex(srv, w, r)
 	})
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		gui.HandleLoginTemplate(srv.Logger, w, r)
@@ -110,6 +128,7 @@ func startGUIApplication(db *sql.DB) {
 
 	// Start the API server and the daemon as goroutines.
 	startAPIServer(db)
+	startInternalAPIServer(db)
 	startDaemonService(db)
 
 	// Give the server a moment to start before opening the browser.
