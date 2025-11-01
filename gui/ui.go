@@ -2,21 +2,21 @@ package gui
 
 import (
 	"net/http"
+	"procguard/api"
 	"procguard/internal/data"
-	"sync"
 )
 
 // HandleIndex serves the main index page of the web UI.
 // It checks for authentication and redirects to the login page if the user is not authenticated.
 // TODO: This handler has a large number of parameters. It could be refactored to be a method on a struct that holds the dependencies.
-func HandleIndex(mu *sync.Mutex, isAuthenticated bool, logger data.Logger, w http.ResponseWriter, r *http.Request) {
+func HandleIndex(srv *api.Server, w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-	mu.Lock()
-	localIsAuthenticated := isAuthenticated
-	mu.Unlock()
+	srv.Mu.Lock()
+	localIsAuthenticated := srv.IsAuthenticated
+	srv.Mu.Unlock()
 
 	if !localIsAuthenticated {
 		http.Redirect(w, r, "/login", http.StatusFound)
@@ -24,7 +24,7 @@ func HandleIndex(mu *sync.Mutex, isAuthenticated bool, logger data.Logger, w htt
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := Templates.ExecuteTemplate(w, "index.html", nil); err != nil {
-		logger.Printf("Error executing dashboard template: %v", err)
+		srv.Logger.Printf("Error executing dashboard template: %v", err)
 	}
 }
 

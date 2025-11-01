@@ -3,9 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"procguard/internal/app"
 	"procguard/internal/data"
@@ -47,8 +45,7 @@ func StartWebServer(addr string, registerExtraRoutes func(srv *Server, r *http.S
 	}
 
 	if err := http.ListenAndServe(addr, srv.authMiddleware(r)); err != nil {
-		fmt.Fprintln(os.Stderr, "Error running server:", err)
-		os.Exit(1)
+		srv.Logger.Fatalf("Error running server: %v", err)
 	}
 }
 

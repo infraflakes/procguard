@@ -174,7 +174,9 @@ function showSubView(viewName: string, parentView: string): void {
   if (el) el.style.display = 'block';
 
   // --- Keep the original data loading logic ---
-  if (viewName === 'blocklist-view') {
+  if (viewName === 'search-view') {
+    search();
+  } else if (viewName === 'blocklist-view') {
     loadBlocklist();
   } else if (viewName === 'web-blocklist-view') {
     loadWebBlocklist();

@@ -2,7 +2,6 @@ package app
 
 import (
 	"database/sql"
-	"fmt"
 	"procguard/internal/data"
 	"slices"
 	"strings"
@@ -15,7 +14,7 @@ import (
 
 const (
 	processCheckInterval     = 2 * time.Second
-	blocklistEnforceInterval = 100 * time.Millisecond
+	blocklistEnforceInterval = 2 * time.Second
 )
 
 var (
@@ -23,35 +22,39 @@ var (
 	procEnumWindows              = user32.NewProc("EnumWindows")
 	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
-)
 
-// hasVisibleWindow checks if a process with the given PID has a visible window.
-func hasVisibleWindow(pid uint32) bool {
-	var foundVisibleWindow bool
-	enumWindows := func(hwnd syscall.Handle, lParam uintptr) uintptr {
+	enumWindowsCallback = syscall.NewCallback(func(hwnd syscall.Handle, lParam uintptr) uintptr {
+		//nolint:govet
+		params := (*enumWindowsParams)(unsafe.Pointer(lParam))
 		var windowPid uint32
 		_, _, err := procGetWindowThreadProcessId.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&windowPid)))
 		if err != syscall.Errno(0) {
-			// Continue enumeration even if one window fails
-			return 1
+			return 1 // Continue on error
 		}
 
-		if windowPid == pid {
-			isVisible, _, _ := procIsWindowVisible.Call(uintptr(hwnd))
-			if isVisible != 0 {
-				foundVisibleWindow = true
+		if windowPid == params.pid {
+			if isVisible, _, _ := procIsWindowVisible.Call(uintptr(hwnd)); isVisible != 0 {
+				params.found = true
 				return 0 // Stop enumeration
 			}
 		}
-		return 1 // Continue enumeration
-	}
+		return 1 // Continue
+	})
+)
 
-	cb := syscall.NewCallback(enumWindows)
-	_, _, err := procEnumWindows.Call(cb, 0)
+type enumWindowsParams struct {
+	pid   uint32
+	found bool
+}
+
+// hasVisibleWindow checks if a process with the given PID has a visible window.
+func hasVisibleWindow(pid uint32) bool {
+	params := &enumWindowsParams{pid: pid, found: false}
+	_, _, err := procEnumWindows.Call(enumWindowsCallback, uintptr(unsafe.Pointer(params)))
 	if err != syscall.Errno(0) {
-		fmt.Printf("Error enumerating windows: %v\n", err)
+		data.GetLogger().Printf("Error enumerating windows: %v", err)
 	}
-	return foundVisibleWindow
+	return params.found
 }
 
 // StartProcessEventLogger starts a long-running goroutine that monitors process creation and termination events.

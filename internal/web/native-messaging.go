@@ -1,10 +1,11 @@
 package web
 
 import (
-	"database/sql"
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"io"
+	"net/http"
 	"os"
 	"procguard/internal/data"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 const (
 	// pollInterval is the interval at which the web blocklist is polled for changes.
 	pollInterval = 2 * time.Second
+	internalAPI  = "http://127.0.0.1:58142"
 )
 
 // WebMetadataPayload is the payload for the log_web_metadata message from the extension.
@@ -39,16 +41,6 @@ type Response struct {
 // Run starts the native messaging host, which listens for messages from the browser extension.
 func Run() {
 	log := data.GetLogger()
-
-	db, err := data.OpenDB()
-	if err != nil {
-		log.Fatalf("Native host failed to open database: %v", err)
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Printf("Failed to close database: %v", err)
-		}
-	}()
 
 	// Start a goroutine to poll the web blocklist and push updates to the extension.
 	go pollWebBlocklist()
@@ -101,14 +93,37 @@ func Run() {
 			if strings.HasPrefix(url, "http://127.0.0.1:58141") {
 				continue
 			}
-			writeUrlToDatabase(db, url)
+
+			// Send the URL to the internal API
+			go func(u string) {
+				jsonData, _ := json.Marshal(map[string]string{"url": u})
+				resp, err := http.Post(internalAPI+"/log-web-event", "application/json", bytes.NewBuffer(jsonData))
+				if err != nil {
+					log.Printf("Failed to send web event to internal API: %v", err)
+					return
+				}
+				if err := resp.Body.Close(); err != nil {
+					log.Printf("Failed to close response body: %v", err)
+				}
+			}(url)
+
 		case "log_web_metadata":
 			var payload WebMetadataPayload
 			if err := json.Unmarshal(req.Payload, &payload); err != nil {
 				log.Printf("Error unmarshalling log_web_metadata payload: %v", err)
 				continue
 			}
-			writeWebMetadataToDatabase(db, &payload)
+			go func(p WebMetadataPayload) {
+				jsonData, _ := json.Marshal(p)
+				resp, err := http.Post(internalAPI+"/log-web-metadata", "application/json", bytes.NewBuffer(jsonData))
+				if err != nil {
+					log.Printf("Failed to send web metadata to internal API: %v", err)
+					return
+				}
+				if err := resp.Body.Close(); err != nil {
+					log.Printf("Failed to close response body: %v", err)
+				}
+			}(payload)
 		case "get_web_blocklist":
 			list, err := data.LoadWebBlocklist()
 			if err != nil {
@@ -135,26 +150,6 @@ func Run() {
 	}
 }
 
-// writeUrlToDatabase inserts a new web event into the database.
-func writeUrlToDatabase(db *sql.DB, url string) {
-	data.EnqueueWrite("INSERT INTO web_events (url, timestamp) VALUES (?, ?)", url, time.Now().Unix())
-}
-
-// writeWebMetadataToDatabase inserts or updates web metadata in the database.
-func writeWebMetadataToDatabase(db *sql.DB, payload *WebMetadataPayload) {
-	// Use an UPSERT operation to either insert a new row or update the existing one for the given domain.
-	// This is useful to keep the metadata up-to-date.
-	query := `
-		INSERT INTO web_metadata (domain, title, icon_url, timestamp)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT(domain) DO UPDATE SET
-			title = excluded.title,
-			icon_url = excluded.icon_url,
-			timestamp = excluded.timestamp;
-	`
-	data.EnqueueWrite(query, payload.Domain, payload.Title, payload.IconURL, time.Now().Unix())
-}
-
 // pollWebBlocklist periodically checks for changes in the web blocklist and sends updates to the extension.
 func pollWebBlocklist() {
 	log := data.GetLogger()
@@ -163,9 +158,18 @@ func pollWebBlocklist() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		list, err := data.LoadWebBlocklist()
+		resp, err := http.Get(internalAPI + "/get-web-blocklist")
 		if err != nil {
-			log.Printf("Error loading web blocklist for polling: %v", err)
+			log.Printf("Failed to get web blocklist from internal API: %v", err)
+			continue
+		}
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
+
+		var list []string
+		if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+			log.Printf("Failed to decode web blocklist from internal API: %v", err)
 			continue
 		}
 

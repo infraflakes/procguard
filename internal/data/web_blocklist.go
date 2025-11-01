@@ -16,7 +16,7 @@ const webBlocklistFile = "web_blocklist.json"
 type WebBlocklistDetails struct {
 	Domain  string `json:"domain"`
 	Title   string `json:"title"`
-	IconURL string `json:"icon_url"`
+	IconURL string `json:"iconUrl"`
 }
 
 // GetBlockedWebsitesWithDetails loads the web blocklist and enriches it with metadata from the database.

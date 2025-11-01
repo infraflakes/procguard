@@ -38,6 +38,11 @@ func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
 	if err := windows.OpenProcessToken(h, windows.TOKEN_QUERY, &token); err != nil {
 		return 0, fmt.Errorf("could not open process token: %w", err)
 	}
+	defer func() {
+		if err := token.Close(); err != nil {
+			data.GetLogger().Printf("Failed to close token handle: %v", err)
+		}
+	}()
 
 	// Get the required buffer size for the token information.
 	var tokenInfoLen uint32
@@ -55,14 +60,18 @@ func GetProcessIntegrityLevel(pid uint32) (uint32, error) {
 	til := (*windows.Tokenmandatorylabel)(unsafe.Pointer(&tokenInfo[0]))
 	sid := til.Label.Sid
 
-	// The integrity level is the last sub-authority in the SID.
-	// A SID is a variable-length structure, so we need to do some pointer arithmetic to get the last sub-authority.
-	// The structure is roughly: [Revision][SubAuthorityCount][Authority][SubAuthority1]...[SubAuthorityN]
-	subAuthorityCount := *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(sid)) + 1))
-	pSubAuthority := uintptr(unsafe.Pointer(sid)) + 8 + (uintptr(subAuthorityCount)-1)*4
+	if sid == nil {
+		return 0, fmt.Errorf("SID is nil in token mandatory label")
+	}
 
-	// The govet linter complains about possible misaligned pointers here, but this is a standard way
-	// to read this kind of data from Windows APIs. The //nolint:govet directive disables this check.
-	//nolint:govet
-	return *(*uint32)(unsafe.Pointer(pSubAuthority)), nil
+	subAuthorityCount := sid.SubAuthorityCount()
+	if subAuthorityCount == 0 {
+		// This can happen for certain SIDs, not necessarily an error, but no integrity level.
+		return 0, nil
+	}
+
+	// The integrity level is the last sub-authority.
+	integrityLevel := sid.SubAuthority(uint32(subAuthorityCount - 1))
+
+	return integrityLevel, nil
 }
