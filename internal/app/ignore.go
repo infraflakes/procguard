@@ -67,6 +67,7 @@ var DefaultWindows = []string{
 	"svchost.exe",
 	"sihost.exe",
 	"ShellHost.exe",
+	"GameBar-",
 	"taskhostw.exe",
 	"conhost.exe",
 	"OpenConsole.exe",
@@ -108,6 +109,7 @@ var DefaultWindows = []string{
 	"cleanmgr.exe",
 	"Taskmgr.exe",
 	"WindowsTerminal.exe",
+	"msedgewebview2.exe",
 }
 
 // IsIgnored checks if a process name should be ignored based on the ignore list.

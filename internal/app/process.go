@@ -24,9 +24,13 @@ var (
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 
 	enumWindowsCallback = syscall.NewCallback(func(hwnd syscall.Handle, lParam uintptr) uintptr {
+		//nolint:govet
 		params := (*enumWindowsParams)(unsafe.Pointer(lParam))
 		var windowPid uint32
-		procGetWindowThreadProcessId.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&windowPid)))
+		_, _, err := procGetWindowThreadProcessId.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&windowPid)))
+		if err != syscall.Errno(0) {
+			return 1 // Continue on error
+		}
 
 		if windowPid == params.pid {
 			if isVisible, _, _ := procIsWindowVisible.Call(uintptr(hwnd)); isVisible != 0 {
@@ -46,7 +50,10 @@ type enumWindowsParams struct {
 // hasVisibleWindow checks if a process with the given PID has a visible window.
 func hasVisibleWindow(pid uint32) bool {
 	params := &enumWindowsParams{pid: pid, found: false}
-	procEnumWindows.Call(enumWindowsCallback, uintptr(unsafe.Pointer(params)))
+	_, _, err := procEnumWindows.Call(enumWindowsCallback, uintptr(unsafe.Pointer(params)))
+	if err != syscall.Errno(0) {
+		data.GetLogger().Printf("Error enumerating windows: %v", err)
+	}
 	return params.found
 }
 

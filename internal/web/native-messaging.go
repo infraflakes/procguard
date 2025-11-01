@@ -102,7 +102,9 @@ func Run() {
 					log.Printf("Failed to send web event to internal API: %v", err)
 					return
 				}
-				resp.Body.Close()
+				if err := resp.Body.Close(); err != nil {
+					log.Printf("Failed to close response body: %v", err)
+				}
 			}(url)
 
 		case "log_web_metadata":
@@ -118,7 +120,9 @@ func Run() {
 					log.Printf("Failed to send web metadata to internal API: %v", err)
 					return
 				}
-				resp.Body.Close()
+				if err := resp.Body.Close(); err != nil {
+					log.Printf("Failed to close response body: %v", err)
+				}
 			}(payload)
 		case "get_web_blocklist":
 			list, err := data.LoadWebBlocklist()
@@ -159,7 +163,9 @@ func pollWebBlocklist() {
 			log.Printf("Failed to get web blocklist from internal API: %v", err)
 			continue
 		}
-		defer resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
 
 		var list []string
 		if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {

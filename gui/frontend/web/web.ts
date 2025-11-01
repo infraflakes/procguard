@@ -117,7 +117,7 @@ async function loadWebLogs(since = '', until = ''): Promise<void> {
             if (webDetailsRes.ok) {
               const webDetails = await webDetailsRes.json();
               title = webDetails.title;
-              iconUrl = webDetails.icon_url;
+              iconUrl = webDetails.iconUrl;
             }
           }
 
@@ -181,15 +181,15 @@ async function loadWebBlocklist(): Promise<void> {
     webBlocklistItems.innerHTML = '';
     if (data && data.length > 0) {
       webBlocklistItems.innerHTML = data
-        .map((item: { domain: string; title: string; icon_url: string }) => {
-          const { domain, title, icon_url } = item;
+        .map((item: { domain: string; title: string; iconUrl: string }) => {
+          const { domain, title, iconUrl } = item;
           return `
           <div class="list-group-item d-flex justify-content-between align-items-center">
             <label class="flex-grow-1 mb-0 d-flex align-items-center">
               <input class="form-check-input me-2" type="checkbox" name="blocked-website" value="${domain}">
               ${
-                icon_url
-                  ? `<img src="${icon_url}" class="me-2" style="width: 24px; height: 24px;">`
+                iconUrl
+                  ? `<img src="${iconUrl}" class="me-2" style="width: 24px; height: 24px;">`
                   : '<div class="me-2" style="width: 24px; height: 24px;"></div>'
               }
               <span class="fw-bold me-2">${title || domain}</span>

@@ -8,7 +8,7 @@ import (
 type WebMetadata struct {
 	Domain  string `json:"domain"`
 	Title   string `json:"title"`
-	IconURL string `json:"icon_url"`
+	IconURL string `json:"iconUrl"`
 }
 
 // GetWebMetadata retrieves the cached metadata for a given domain from the database.
