@@ -1,3 +1,5 @@
+> DEVELOPMENT MOVED TO https://github.com/VedaIO/veda-anchor
+
 # ProcGuard
 
 ProcGuard is a Windows-based tool for monitoring and controlling processes and web activity on your system. It is composed of a daemon that runs in the background, an API server with a web-based GUI, and a browser extension for web monitoring.
